@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Camera, Upload, Calendar, Weight, CheckCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Camera, Upload, Calendar, Weight, CheckCircle, MapPin } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EcoButton } from "@/components/ui/eco-button";
 import { InputWithIcon } from "@/components/ui/input-with-icon";
@@ -9,12 +9,22 @@ import { useToast } from "@/hooks/use-toast";
 import type { WasteType, WasteEntry } from "@/types";
 
 const wasteTypes: WasteType[] = [
-  { id: 'plastic', name: 'Plastic', icon: '♻️', color: 'text-blue-500' },
-  { id: 'paper', name: 'Paper', icon: '📄', color: 'text-orange-500' },
-  { id: 'organic', name: 'Organic', icon: '🌱', color: 'text-green-500' },
-  { id: 'metal', name: 'Metal', icon: '🔩', color: 'text-gray-500' },
-  { id: 'glass', name: 'Glass', icon: '🫙', color: 'text-cyan-500' },
-  { id: 'electronic', name: 'Electronic', icon: '💻', color: 'text-purple-500' },
+  { id: 'plastic', name: 'பிளாஸ்டிக்', icon: '♻️', color: 'text-blue-500' },
+  { id: 'paper', name: 'காகிதம்', icon: '📄', color: 'text-orange-500' },
+  { id: 'organic', name: 'இயற்கை', icon: '🌱', color: 'text-green-500' },
+  { id: 'metal', name: 'உலோகம்', icon: '🔩', color: 'text-gray-500' },
+  { id: 'glass', name: 'கண்ணாடி', icon: '🫙', color: 'text-cyan-500' },
+  { id: 'electronic', name: 'மின்னணு', icon: '💻', color: 'text-purple-500' },
+  { id: 'cardboard', name: 'அட்டை', icon: '📦', color: 'text-amber-600' },
+  { id: 'textile', name: 'துணி', icon: '👕', color: 'text-pink-500' },
+  { id: 'wood', name: 'மரம்', icon: '🪵', color: 'text-yellow-700' },
+  { id: 'battery', name: 'பேட்டரி', icon: '🔋', color: 'text-red-500' },
+  { id: 'chemical', name: 'வேதியியல்', icon: '🧪', color: 'text-red-700' },
+  { id: 'food', name: 'உணவு கழிவு', icon: '🍎', color: 'text-green-600' },
+  { id: 'aluminum', name: 'அலுமினியம்', icon: '🥤', color: 'text-slate-500' },
+  { id: 'rubber', name: 'ரப்பர்', icon: '🏀', color: 'text-gray-700' },
+  { id: 'ceramic', name: 'மட்பாண்டம்', icon: '🏺', color: 'text-stone-600' },
+  { id: 'foam', name: 'நுரை', icon: '🧽', color: 'text-yellow-500' },
 ];
 
 interface WasteEntryFormProps {
@@ -26,17 +36,57 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
   const [wasteType, setWasteType] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [image, setImage] = useState<File | null>(null);
+  const [location, setLocation] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
   const { toast } = useToast();
+
+  // Get current location on component mount
+  useEffect(() => {
+    getCurrentLocation();
+  }, []);
+
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast({
+        title: "இடம் கிடைக்கவில்லை",
+        description: "உங்கள் சாதனம் இடம் கண்டறிதலை ஆதரிக்கவில்லை",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setLocation(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+        setIsGettingLocation(false);
+        toast({
+          title: "இடம் கண்டறியப்பட்டது",
+          description: "உங்கள் தற்போதைய இடம் பதிவு செய்யப்பட்டது",
+        });
+      },
+      (error) => {
+        setIsGettingLocation(false);
+        toast({
+          title: "இடம் கண்டறிதல் பிழை",
+          description: "உங்கள் இடத்தைப் பெற முடியவில்லை. அனுமதிகளைச் சரிபார்க்கவும்",
+          variant: "destructive",
+        });
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  };
 
   const handleImageCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setImage(file);
       toast({
-        title: "Image captured",
-        description: "Image ready for upload",
+        title: "புகைப்படம் எடுக்கப்பட்டது",
+        description: "புகைப்படம் பதிவேற்றத்திற்கு தயார்",
       });
     }
   };
@@ -46,8 +96,8 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
     
     if (!wasteType || !amount) {
       toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields",
+        title: "தகவல் இல்லை",
+        description: "தயவுசெய்து அனைத்து தேவையான புலங்களையும் நிரப்பவும்",
         variant: "destructive",
       });
       return;
@@ -64,13 +114,14 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
         wasteType: selectedWasteType,
         amount: parseFloat(amount),
         dateTime: new Date().toISOString(),
+        location: location || undefined,
         imageUrl: image ? URL.createObjectURL(image) : undefined,
       });
       
       setIsSubmitted(true);
       toast({
-        title: "Waste Entry Submitted",
-        description: "Your waste entry has been recorded successfully!",
+        title: "கழிவு பதிவு சமர்ப்பிக்கப்பட்டது",
+        description: "உங்கள் கழிவு பதிவு வெற்றிகரமாக பதிவு செய்யப்பட்டது!",
       });
       
       // Reset form after 3 seconds
@@ -79,12 +130,13 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
         setWasteType('');
         setAmount('');
         setImage(null);
+        getCurrentLocation(); // Get location again for next entry
       }, 3000);
       
     } catch (error) {
       toast({
-        title: "Submission Failed",
-        description: "Failed to submit waste entry. Please try again.",
+        title: "சமர்ப்பிப்பு தோல்வி",
+        description: "கழிவு பதிவை சமர்ப்பிக்க முடியவில்லை. தயவுசெய்து மீண்டும் முயற்சிக்கவும்.",
         variant: "destructive",
       });
     } finally {
@@ -101,13 +153,13 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
               <CheckCircle className="w-10 h-10 text-success-foreground" />
             </div>
             <h2 className="text-2xl font-display font-semibold text-foreground mb-2">
-              Submission Successful!
+              சமர்ப்பிப்பு வெற்றிகரம்!
             </h2>
             <p className="text-muted-foreground mb-4">
-              Your waste entry has been recorded and will be reviewed by the admin.
+              உங்கள் கழிவு பதிவு பதிவு செய்யப்பட்டு நிர்வாகி மூலம் மதிப்பீடு செய்யப்படும்.
             </p>
             <div className="text-sm text-muted-foreground">
-              Redirecting to form in a few seconds...
+              சில வினாடிகளில் படிவத்திற்கு திருப்பி அனுப்பப்படும்...
             </div>
           </CardContent>
         </Card>
@@ -120,17 +172,17 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
       <div className="max-w-md mx-auto">
         <Card className="shadow-eco border-card-border">
           <CardHeader>
-            <CardTitle className="text-xl font-display text-foreground">Submit Waste Entry</CardTitle>
-            <CardDescription>Record your waste collection data</CardDescription>
+            <CardTitle className="text-xl font-display text-foreground">கழிவு பதிவு சமர்ப்பிக்கவும்</CardTitle>
+            <CardDescription>உங்கள் கழிவு சேகரிப்பு தரவைப் பதிவு செய்யவும்</CardDescription>
           </CardHeader>
           
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="wasteType" className="text-sm font-medium">Waste Type</Label>
+                <Label htmlFor="wasteType" className="text-sm font-medium">கழிவு வகை</Label>
                 <Select value={wasteType} onValueChange={setWasteType} required>
                   <SelectTrigger className="h-12">
-                    <SelectValue placeholder="Select waste type" />
+                    <SelectValue placeholder="கழிவு வகையைத் தேர்ந்தெடுக்கவும்" />
                   </SelectTrigger>
                   <SelectContent>
                     {wasteTypes.map((type) => (
@@ -146,13 +198,13 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="amount" className="text-sm font-medium">Amount (kg)</Label>
+                <Label htmlFor="amount" className="text-sm font-medium">எடை (கி.கி)</Label>
                 <InputWithIcon
                   icon={<Weight className="w-4 h-4" />}
                   type="number"
                   step="0.1"
                   min="0"
-                  placeholder="Enter weight in kg"
+                  placeholder="கிலோகிராமில் எடையை உள்ளிடவும்"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   required
@@ -160,7 +212,7 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="datetime" className="text-sm font-medium">Date & Time</Label>
+                <Label htmlFor="datetime" className="text-sm font-medium">தேதி மற்றும் நேரம்</Label>
                 <InputWithIcon
                   icon={<Calendar className="w-4 h-4" />}
                   type="datetime-local"
@@ -170,13 +222,36 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Photo (Optional)</Label>
+                <Label className="text-sm font-medium">இடம்</Label>
+                <div className="flex gap-2">
+                  <InputWithIcon
+                    icon={<MapPin className="w-4 h-4" />}
+                    type="text"
+                    placeholder="இடம் கண்டறியப்படுகிறது..."
+                    value={location}
+                    disabled
+                    className="flex-1"
+                  />
+                  <EcoButton 
+                    variant="outline" 
+                    size="sm" 
+                    type="button" 
+                    onClick={getCurrentLocation}
+                    disabled={isGettingLocation}
+                  >
+                    {isGettingLocation ? "..." : "📍"}
+                  </EcoButton>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">புகைப்படம் (விருப்பமானது)</Label>
                 <div className="flex gap-2">
                   <label htmlFor="camera" className="flex-1">
                     <EcoButton variant="outline" size="sm" type="button" className="w-full" asChild>
                       <div className="cursor-pointer">
                         <Camera className="w-4 h-4" />
-                        Camera
+                        கேமரா
                       </div>
                     </EcoButton>
                     <input
@@ -193,7 +268,7 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
                     <EcoButton variant="outline" size="sm" type="button" className="w-full" asChild>
                       <div className="cursor-pointer">
                         <Upload className="w-4 h-4" />
-                        Gallery
+                        கேலரி
                       </div>
                     </EcoButton>
                     <input
@@ -207,7 +282,7 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
                 </div>
                 {image && (
                   <p className="text-xs text-success">
-                    ✓ Image selected: {image.name}
+                    ✓ புகைப்படம் தேர்ந்தெடுக்கப்பட்டது: {image.name}
                   </p>
                 )}
               </div>
@@ -218,7 +293,7 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
                 size="lg"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Submitting..." : "Submit Entry"}
+                {isSubmitting ? "சமர்ப்பிக்கப்படுகிறது..." : "பதிவு சமர்ப்பிக்கவும்"}
               </EcoButton>
             </form>
           </CardContent>

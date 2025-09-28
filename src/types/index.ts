@@ -12,6 +12,7 @@ export interface WasteEntry {
   wasteType: WasteType;
   amount: number;
   dateTime: string;
+  location?: string;
   imageUrl?: string;
   status: 'pending' | 'approved' | 'rejected';
 }
