@@ -34,6 +34,32 @@ export default function DataEntriesTab({ wasteEntries }: DataEntriesTabProps) {
     return new Date(dateString).toLocaleString();
   };
 
+  const exportToCSV = () => {
+    const headers = ['Employee Name', 'Employee ID', 'Waste Type', 'Amount (kg)', 'Date & Time', 'Status'];
+    const csvData = filteredEntries.map(entry => [
+      entry.employeeName,
+      entry.employeeId,
+      entry.wasteType.name,
+      entry.amount,
+      formatDate(entry.dateTime),
+      entry.status
+    ]);
+
+    const csvContent = [headers, ...csvData]
+      .map(row => row.map(field => `"${field}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `waste_entries_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -45,7 +71,7 @@ export default function DataEntriesTab({ wasteEntries }: DataEntriesTabProps) {
             View and manage all waste collection entries
           </p>
         </div>
-        <EcoButton variant="outline">
+        <EcoButton variant="outline" onClick={exportToCSV}>
           <Download className="w-4 h-4" />
           Export Data
         </EcoButton>
