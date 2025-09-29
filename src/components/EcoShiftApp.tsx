@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import LoginForm from "@/components/auth/LoginForm";
 import WasteEntryForm from "@/components/employee/WasteEntryForm";
 import AdminDashboard from "@/components/admin/AdminDashboard";
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { 
   generateMockWasteEntries, 
   calculateSummaryData, 
@@ -60,30 +61,36 @@ export default function EcoShiftApp() {
 
   if (currentUser.type === 'employee') {
     return (
-      <div className="relative">
-        <div className="absolute top-4 right-4 z-10">
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 text-sm bg-card border border-card-border rounded-lg text-foreground hover:bg-accent transition-colors"
-          >
-            Logout
-          </button>
+      <>
+        <div className="relative">
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 text-sm bg-card border border-card-border rounded-lg text-foreground hover:bg-accent transition-colors"
+            >
+              Logout
+            </button>
+          </div>
+          <WasteEntryForm 
+            employeeId={currentUser.id} 
+            onSubmit={handleWasteSubmission} 
+          />
         </div>
-        <WasteEntryForm 
-          employeeId={currentUser.id} 
-          onSubmit={handleWasteSubmission} 
-        />
-      </div>
+        <PWAInstallPrompt />
+      </>
     );
   }
 
   return (
-    <AdminDashboard
-      user={currentUser}
-      wasteEntries={wasteEntries}
-      summaryData={summaryData}
-      leaderboardData={leaderboardData}
-      onLogout={handleLogout}
-    />
+    <>
+      <AdminDashboard
+        user={currentUser}
+        wasteEntries={wasteEntries}
+        summaryData={summaryData}
+        leaderboardData={leaderboardData}
+        onLogout={handleLogout}
+      />
+      <PWAInstallPrompt />
+    </>
   );
 }

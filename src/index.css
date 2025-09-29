@@ -19,11 +19,11 @@
     --popover: 0 0% 100%;
     --popover-foreground: 210 20% 15%;
 
-    /* Primary - EcoShift Green */
-    --primary: 142 76% 36%;
+    /* Primary - EcoShift Green #4CAF50 */
+    --primary: 122 39% 49%;
     --primary-foreground: 0 0% 100%;
-    --primary-light: 142 76% 45%;
-    --primary-dark: 142 76% 28%;
+    --primary-light: 122 39% 60%;
+    --primary-dark: 122 39% 35%;
 
     /* Secondary - Light Green */
     --secondary: 142 30% 95%;
