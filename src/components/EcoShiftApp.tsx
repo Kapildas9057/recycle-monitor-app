@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import LoginForm from "@/components/auth/LoginForm";
 import WasteEntryForm from "@/components/employee/WasteEntryForm";
 import AdminDashboard from "@/components/admin/AdminDashboard";
