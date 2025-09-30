@@ -1,6 +1,6 @@
-const CACHE_NAME = 'ecoshift-v2';
-const STATIC_CACHE = 'ecoshift-static-v2';
-const DYNAMIC_CACHE = 'ecoshift-dynamic-v2';
+const CACHE_NAME = 'ecoshift-v3';
+const STATIC_CACHE = 'ecoshift-static-v3';
+const DYNAMIC_CACHE = 'ecoshift-dynamic-v3';
 
 // Core assets to cache immediately
 const CORE_ASSETS = [
