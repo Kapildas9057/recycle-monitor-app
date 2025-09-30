@@ -16,8 +16,20 @@ const PWAInstallPrompt: React.FC = () => {
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isInstallable, setIsInstallable] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
 
   useEffect(() => {
+    // Check if dismissed in this session
+    try {
+      const dismissed = sessionStorage.getItem('pwa-prompt-dismissed');
+      if (dismissed) {
+        setIsDismissed(true);
+        return;
+      }
+    } catch (error) {
+      console.warn('Session storage not available');
+    }
+
     // Check if it's iOS
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     setIsIOS(iOS);
@@ -74,16 +86,19 @@ const PWAInstallPrompt: React.FC = () => {
 
   const handleDismiss = () => {
     setShowPrompt(false);
+    setIsDismissed(true);
     // Don't show again for this session
-    sessionStorage.setItem('pwa-prompt-dismissed', 'true');
+    try {
+      sessionStorage.setItem('pwa-prompt-dismissed', 'true');
+    } catch (error) {
+      console.warn('Session storage not available');
+    }
   };
 
   // Don't show if already dismissed in this session
-  if (sessionStorage.getItem('pwa-prompt-dismissed')) {
+  if (isDismissed || !showPrompt) {
     return null;
   }
-
-  if (!showPrompt) return null;
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-sm">
