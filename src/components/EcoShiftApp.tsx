@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import LoginForm from "@/components/auth/LoginForm";
 import WasteEntryForm from "@/components/employee/WasteEntryForm";
 import AdminDashboard from "@/components/admin/AdminDashboard";
-import PWAInstallPrompt from "@/components/PWAInstallPrompt";
+// import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import { 
   generateMockWasteEntries, 
   calculateSummaryData, 
@@ -96,7 +96,6 @@ export default function EcoShiftApp() {
             onSubmit={handleWasteSubmission} 
           />
         </div>
-        <PWAInstallPrompt />
       </>
     );
   }
@@ -112,7 +111,7 @@ export default function EcoShiftApp() {
         onApproveEntry={handleApproveEntry}
         onRejectEntry={handleRejectEntry}
       />
-      <PWAInstallPrompt />
+      
     </>
   );
 }
