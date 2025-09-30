@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import LoginForm from "@/components/auth/LoginForm";
 import WasteEntryForm from "@/components/employee/WasteEntryForm";
 import AdminDashboard from "@/components/admin/AdminDashboard";
-import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import { 
   generateMockWasteEntries, 
   calculateSummaryData, 

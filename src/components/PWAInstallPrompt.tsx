@@ -11,7 +11,7 @@ interface BeforeInstallPromptEvent extends Event {
   }>;
 }
 
-export const PWAInstallPrompt: React.FC = () => {
+const PWAInstallPrompt: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
@@ -142,3 +142,5 @@ export const PWAInstallPrompt: React.FC = () => {
     </div>
   );
 };
+
+export default PWAInstallPrompt;
