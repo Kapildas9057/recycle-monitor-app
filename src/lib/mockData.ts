@@ -57,6 +57,9 @@ export const generateMockWasteEntries = (): WasteEntry[] => {
     const date = new Date();
     date.setDate(date.getDate() - daysAgo);
     
+    const hasPhoto = Math.random() > 0.3; // 70% chance of having a photo
+    const status = Math.random() > 0.1 ? 'approved' : Math.random() > 0.5 ? 'pending' : 'rejected';
+    
     entries.push({
       id: `WE${String(i + 1).padStart(3, '0')}`,
       employeeId: employee.id,
@@ -64,7 +67,8 @@ export const generateMockWasteEntries = (): WasteEntry[] => {
       wasteType,
       amount: Math.round((Math.random() * 10 + 1) * 10) / 10, // 1-10 kg
       dateTime: date.toISOString(),
-      status: Math.random() > 0.1 ? 'approved' : Math.random() > 0.5 ? 'pending' : 'rejected',
+      imageUrl: hasPhoto ? `https://picsum.photos/800/600?random=${i}` : undefined,
+      status,
     });
   }
   

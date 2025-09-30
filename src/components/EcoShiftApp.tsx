@@ -51,6 +51,26 @@ export default function EcoShiftApp() {
     setWasteEntries(prev => [newEntry, ...prev]);
   };
 
+  const handleApproveEntry = (entryId: string) => {
+    setWasteEntries(prev => 
+      prev.map(entry => 
+        entry.id === entryId 
+          ? { ...entry, status: 'approved' as const }
+          : entry
+      )
+    );
+  };
+
+  const handleRejectEntry = (entryId: string, reason?: string) => {
+    setWasteEntries(prev => 
+      prev.map(entry => 
+        entry.id === entryId 
+          ? { ...entry, status: 'rejected' as const }
+          : entry
+      )
+    );
+  };
+
   // Calculate derived data
   const summaryData = calculateSummaryData(wasteEntries);
   const leaderboardData = calculateLeaderboard(wasteEntries);
@@ -89,6 +109,8 @@ export default function EcoShiftApp() {
         summaryData={summaryData}
         leaderboardData={leaderboardData}
         onLogout={handleLogout}
+        onApproveEntry={handleApproveEntry}
+        onRejectEntry={handleRejectEntry}
       />
       <PWAInstallPrompt />
     </>

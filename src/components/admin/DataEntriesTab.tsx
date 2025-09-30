@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Eye, Download } from "lucide-react";
+import { Search, Eye, Download, Camera, CameraOff } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { InputWithIcon } from "@/components/ui/input-with-icon";
@@ -106,6 +106,7 @@ export default function DataEntriesTab({ wasteEntries }: DataEntriesTabProps) {
                   <TableHead>Waste Type</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Date & Time</TableHead>
+                  <TableHead>Photo</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -124,6 +125,21 @@ export default function DataEntriesTab({ wasteEntries }: DataEntriesTabProps) {
                     <TableCell>{entry.amount} kg</TableCell>
                     <TableCell className="text-sm">
                       {formatDate(entry.dateTime)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {entry.imageUrl ? (
+                          <>
+                            <Camera className="w-4 h-4 text-success" />
+                            <span className="text-sm text-success">Yes</span>
+                          </>
+                        ) : (
+                          <>
+                            <CameraOff className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">No</span>
+                          </>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge className={getStatusColor(entry.status)}>

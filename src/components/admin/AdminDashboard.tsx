@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BarChart3, Calendar, Users, Award, LogOut } from "lucide-react";
+import { BarChart3, Calendar, Users, Award, LogOut, ClipboardCheck } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EcoButton } from "@/components/ui/eco-button";
@@ -7,6 +7,7 @@ import SummaryTab from "./SummaryTab";
 import DataEntriesTab from "./DataEntriesTab";
 import GraphsTab from "./GraphsTab";
 import LeaderboardTab from "./LeaderboardTab";
+import ReviewTab from "./ReviewTab";
 import type { User, WasteEntry, SummaryData, LeaderboardEntry } from "@/types";
 
 interface AdminDashboardProps {
@@ -15,6 +16,8 @@ interface AdminDashboardProps {
   summaryData: SummaryData;
   leaderboardData: LeaderboardEntry[];
   onLogout: () => void;
+  onApproveEntry: (entryId: string) => void;
+  onRejectEntry: (entryId: string, reason?: string) => void;
 }
 
 export default function AdminDashboard({
@@ -22,7 +25,9 @@ export default function AdminDashboard({
   wasteEntries,
   summaryData,
   leaderboardData,
-  onLogout
+  onLogout,
+  onApproveEntry,
+  onRejectEntry
 }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState("summary");
 
@@ -49,7 +54,7 @@ export default function AdminDashboard({
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-card border border-card-border">
+          <TabsList className="grid w-full grid-cols-5 bg-card border border-card-border">
             <TabsTrigger value="summary" className="flex items-center gap-2">
               <BarChart3 className="w-4 h-4" />
               Summary
@@ -65,6 +70,10 @@ export default function AdminDashboard({
             <TabsTrigger value="leaderboard" className="flex items-center gap-2">
               <Award className="w-4 h-4" />
               Leaderboard
+            </TabsTrigger>
+            <TabsTrigger value="review" className="flex items-center gap-2">
+              <ClipboardCheck className="w-4 h-4" />
+              Review
             </TabsTrigger>
           </TabsList>
 
@@ -82,6 +91,14 @@ export default function AdminDashboard({
 
           <TabsContent value="leaderboard">
             <LeaderboardTab leaderboardData={leaderboardData} />
+          </TabsContent>
+
+          <TabsContent value="review">
+            <ReviewTab 
+              wasteEntries={wasteEntries} 
+              onApprove={onApproveEntry}
+              onReject={onRejectEntry}
+            />
           </TabsContent>
         </Tabs>
       </div>
