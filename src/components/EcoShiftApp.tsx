@@ -71,6 +71,10 @@ export default function EcoShiftApp() {
     );
   };
 
+  const handleClearAllData = () => {
+    setWasteEntries([]);
+  };
+
   // Calculate derived data
   const summaryData = calculateSummaryData(wasteEntries);
   const leaderboardData = calculateLeaderboard(wasteEntries);
@@ -110,6 +114,7 @@ export default function EcoShiftApp() {
         onLogout={handleLogout}
         onApproveEntry={handleApproveEntry}
         onRejectEntry={handleRejectEntry}
+        onClearAllData={handleClearAllData}
       />
       
     </>

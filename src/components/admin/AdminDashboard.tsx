@@ -18,6 +18,7 @@ interface AdminDashboardProps {
   onLogout: () => void;
   onApproveEntry: (entryId: string) => void;
   onRejectEntry: (entryId: string, reason?: string) => void;
+  onClearAllData: () => void;
 }
 
 export default function AdminDashboard({
@@ -27,7 +28,8 @@ export default function AdminDashboard({
   leaderboardData,
   onLogout,
   onApproveEntry,
-  onRejectEntry
+  onRejectEntry,
+  onClearAllData
 }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState("summary");
 
@@ -82,7 +84,7 @@ export default function AdminDashboard({
           </TabsContent>
 
           <TabsContent value="data">
-            <DataEntriesTab wasteEntries={wasteEntries} />
+            <DataEntriesTab wasteEntries={wasteEntries} onClearAllData={onClearAllData} />
           </TabsContent>
 
           <TabsContent value="graphs">

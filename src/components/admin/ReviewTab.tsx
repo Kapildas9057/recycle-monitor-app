@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Eye, CheckCircle, XCircle, Camera, CameraOff, AlertTriangle } from "lucide-react";
+import { translateTamilToEnglish } from "@/lib/translateTamil";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { InputWithIcon } from "@/components/ui/input-with-icon";
@@ -26,9 +27,27 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [entryToReject, setEntryToReject] = useState<string | null>(null);
+  const [translatedEntries, setTranslatedEntries] = useState<WasteEntry[]>([]);
   const { toast } = useToast();
 
-  const filteredEntries = wasteEntries.filter(entry => {
+  useEffect(() => {
+    const translateEntries = async () => {
+      const translated = await Promise.all(
+        wasteEntries.map(async (entry) => ({
+          ...entry,
+          wasteType: {
+            ...entry.wasteType,
+            name: await translateTamilToEnglish(entry.wasteType.name)
+          }
+        }))
+      );
+      setTranslatedEntries(translated);
+    };
+
+    translateEntries();
+  }, [wasteEntries]);
+
+  const filteredEntries = translatedEntries.filter(entry => {
     const matchesSearch = 
       entry.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       entry.employeeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -83,9 +102,9 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
     }
   };
 
-  const pendingCount = wasteEntries.filter(e => e.status === 'pending').length;
-  const approvedCount = wasteEntries.filter(e => e.status === 'approved').length;
-  const rejectedCount = wasteEntries.filter(e => e.status === 'rejected').length;
+  const pendingCount = translatedEntries.filter(e => e.status === 'pending').length;
+  const approvedCount = translatedEntries.filter(e => e.status === 'approved').length;
+  const rejectedCount = translatedEntries.filter(e => e.status === 'rejected').length;
 
   return (
     <div className="space-y-6">

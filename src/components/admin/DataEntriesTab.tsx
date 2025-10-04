@@ -1,20 +1,40 @@
-import { useState } from "react";
-import { Search, Eye, Download, Camera, CameraOff } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Eye, Download, Camera, CameraOff, Trash2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { InputWithIcon } from "@/components/ui/input-with-icon";
 import { EcoButton } from "@/components/ui/eco-button";
 import { Badge } from "@/components/ui/badge";
 import type { WasteEntry } from "@/types";
+import { translateTamilToEnglish } from "@/lib/translateTamil";
 
 interface DataEntriesTabProps {
   wasteEntries: WasteEntry[];
+  onClearAllData: () => void;
 }
 
-export default function DataEntriesTab({ wasteEntries }: DataEntriesTabProps) {
+export default function DataEntriesTab({ wasteEntries, onClearAllData }: DataEntriesTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [translatedEntries, setTranslatedEntries] = useState<WasteEntry[]>([]);
 
-  const filteredEntries = wasteEntries.filter(
+  useEffect(() => {
+    const translateEntries = async () => {
+      const translated = await Promise.all(
+        wasteEntries.map(async (entry) => ({
+          ...entry,
+          wasteType: {
+            ...entry.wasteType,
+            name: await translateTamilToEnglish(entry.wasteType.name)
+          }
+        }))
+      );
+      setTranslatedEntries(translated);
+    };
+
+    translateEntries();
+  }, [wasteEntries]);
+
+  const filteredEntries = translatedEntries.filter(
     entry => 
       entry.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       entry.employeeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -71,10 +91,20 @@ export default function DataEntriesTab({ wasteEntries }: DataEntriesTabProps) {
             View and manage all waste collection entries
           </p>
         </div>
-        <EcoButton variant="outline" onClick={exportToCSV}>
-          <Download className="w-4 h-4" />
-          Export Data
-        </EcoButton>
+        <div className="flex gap-2">
+          <EcoButton variant="outline" onClick={exportToCSV}>
+            <Download className="w-4 h-4" />
+            Export Data
+          </EcoButton>
+          <EcoButton 
+            variant="outline" 
+            onClick={onClearAllData}
+            className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+          >
+            <Trash2 className="w-4 h-4" />
+            Clear All Data
+          </EcoButton>
+        </div>
       </div>
 
       <Card className="shadow-card border-card-border">
