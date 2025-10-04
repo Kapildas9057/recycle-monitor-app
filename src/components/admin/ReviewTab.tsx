@@ -28,13 +28,16 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [entryToReject, setEntryToReject] = useState<string | null>(null);
   const [translatedEntries, setTranslatedEntries] = useState<WasteEntry[]>([]);
+  const [isTranslating, setIsTranslating] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     const translateEntries = async () => {
+      setIsTranslating(true);
       const translated = await Promise.all(
         wasteEntries.map(async (entry) => ({
           ...entry,
+          employeeName: await translateTamilToEnglish(entry.employeeName),
           wasteType: {
             ...entry.wasteType,
             name: await translateTamilToEnglish(entry.wasteType.name)
@@ -42,6 +45,7 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
         }))
       );
       setTranslatedEntries(translated);
+      setIsTranslating(false);
     };
 
     translateEntries();
@@ -208,8 +212,16 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
+          {isTranslating ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <p className="text-muted-foreground">Translating entries...</p>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Employee</TableHead>
@@ -314,6 +326,7 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
               </TableBody>
             </Table>
           </div>
+          )}
         </CardContent>
       </Card>
 
