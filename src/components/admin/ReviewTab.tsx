@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Eye, CheckCircle, XCircle, Camera, CameraOff, AlertTriangle } from "lucide-react";
+import { Search, Eye, CheckCircle, XCircle, Camera, CameraOff, AlertTriangle, TrendingUp } from "lucide-react";
 import { translateTamilToEnglish } from "@/lib/translateTamil";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -109,11 +109,28 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
   const pendingCount = translatedEntries.filter(e => e.status === 'pending').length;
   const approvedCount = translatedEntries.filter(e => e.status === 'approved').length;
   const rejectedCount = translatedEntries.filter(e => e.status === 'rejected').length;
+  const totalEntries = translatedEntries.length;
+  const totalWasteCollected = translatedEntries
+    .filter(e => e.status === 'approved')
+    .reduce((sum, e) => sum + e.amount, 0);
 
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Search className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-2xl font-bold text-foreground">{totalEntries}</p>
+                <p className="text-muted-foreground">Total Entries</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
@@ -151,6 +168,20 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
               <div className="ml-4">
                 <p className="text-2xl font-bold text-foreground">{rejectedCount}</p>
                 <p className="text-muted-foreground">Rejected</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <TrendingUp className="w-6 h-6 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-2xl font-bold text-foreground">{totalWasteCollected.toFixed(1)} kg</p>
+                <p className="text-muted-foreground">Total Collected</p>
               </div>
             </div>
           </CardContent>
