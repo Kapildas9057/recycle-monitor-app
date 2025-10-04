@@ -9,6 +9,15 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
+  preview: {
+    allowedHosts: [
+      "recycle-monitor-app.onrender.com", // ✅ Render deploy domain
+      "localhost",                        // ✅ Allow local testing
+      "127.0.0.1",                        // ✅ Backup localhost
+      "*.onrender.com"                    // ✅ (Optional) wildcard for future deployments
+    ],
+    port: 8080, // Optional: make sure preview uses the same port
+  },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
     alias: {
