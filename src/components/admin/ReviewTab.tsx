@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import type { WasteEntry } from "@/types";
 
@@ -278,16 +278,14 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
                   <TableRow key={entry.id}>
                     <TableCell className="font-medium">
                       {hasOriginalTamil && originalEntry.employeeName !== entry.employeeName ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="cursor-help">{entry.employeeName}</span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="text-sm">Original: {originalEntry.employeeName}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="cursor-help">{entry.employeeName}</span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-sm">Original: {originalEntry.employeeName}</p>
+                          </TooltipContent>
+                        </Tooltip>
                       ) : (
                         <span>{entry.employeeName}</span>
                       )}
@@ -295,19 +293,17 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
                     <TableCell className="text-muted-foreground">{entry.employeeId}</TableCell>
                     <TableCell>
                       {hasOriginalTamil && originalEntry.wasteType.name !== entry.wasteType.name ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center gap-2 cursor-help">
-                                <span className="text-lg">{entry.wasteType.icon}</span>
-                                <span>{entry.wasteType.name}</span>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="text-sm">Original: {originalEntry.wasteType.name}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center gap-2 cursor-help">
+                              <span className="text-lg">{entry.wasteType.icon}</span>
+                              <span>{entry.wasteType.name}</span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-sm">Original: {originalEntry.wasteType.name}</p>
+                          </TooltipContent>
+                        </Tooltip>
                       ) : (
                         <div className="flex items-center gap-2">
                           <span className="text-lg">{entry.wasteType.icon}</span>
