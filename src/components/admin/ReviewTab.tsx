@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import type { WasteEntry } from "@/types";
 
@@ -266,15 +267,46 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredEntries.map((entry) => (
+                {filteredEntries.map((entry, index) => {
+                  const originalEntry = wasteEntries[index];
+                  const hasOriginalTamil = originalEntry && (
+                    originalEntry.employeeName !== entry.employeeName ||
+                    originalEntry.wasteType.name !== entry.wasteType.name
+                  );
+                  
+                  return (
                   <TableRow key={entry.id}>
-                    <TableCell className="font-medium">{entry.employeeName}</TableCell>
+                    <TableCell className="font-medium">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="cursor-help">{entry.employeeName}</span>
+                          </TooltipTrigger>
+                          {hasOriginalTamil && originalEntry.employeeName !== entry.employeeName && (
+                            <TooltipContent>
+                              <p className="text-sm">Original: {originalEntry.employeeName}</p>
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
+                    </TableCell>
                     <TableCell className="text-muted-foreground">{entry.employeeId}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">{entry.wasteType.icon}</span>
-                        <span>{entry.wasteType.name}</span>
-                      </div>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center gap-2 cursor-help">
+                              <span className="text-lg">{entry.wasteType.icon}</span>
+                              <span>{entry.wasteType.name}</span>
+                            </div>
+                          </TooltipTrigger>
+                          {hasOriginalTamil && originalEntry.wasteType.name !== entry.wasteType.name && (
+                            <TooltipContent>
+                              <p className="text-sm">Original: {originalEntry.wasteType.name}</p>
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
                     </TableCell>
                     <TableCell>{entry.amount} kg</TableCell>
                     <TableCell className="text-sm">
@@ -353,7 +385,8 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
