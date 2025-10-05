@@ -1,6 +1,6 @@
-const CACHE_NAME = 'ecoshift-v3';
-const STATIC_CACHE = 'ecoshift-static-v3';
-const DYNAMIC_CACHE = 'ecoshift-dynamic-v3';
+const CACHE_NAME = 'ecoshift-v4';
+const STATIC_CACHE = 'ecoshift-static-v4';
+const DYNAMIC_CACHE = 'ecoshift-dynamic-v4';
 
 // Core assets to cache immediately
 const CORE_ASSETS = [
@@ -54,6 +54,8 @@ self.addEventListener('fetch', (event) => {
   // Skip chrome-extension and other non-http requests
   if (!request.url.startsWith('http')) return;
 
+  // Avoid caching dev/preview module scripts to prevent duplicate React copies
+  if (request.url.includes('/node_modules/.vite/')) return;
   event.respondWith(
     caches.match(request)
       .then((cachedResponse) => {
