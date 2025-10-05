@@ -267,8 +267,8 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredEntries.map((entry, index) => {
-                  const originalEntry = wasteEntries[index];
+                {filteredEntries.map((entry) => {
+                  const originalEntry = wasteEntries.find(e => e.id === entry.id);
                   const hasOriginalTamil = originalEntry && (
                     originalEntry.employeeName !== entry.employeeName ||
                     originalEntry.wasteType.name !== entry.wasteType.name
@@ -277,36 +277,43 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
                   return (
                   <TableRow key={entry.id}>
                     <TableCell className="font-medium">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="cursor-help">{entry.employeeName}</span>
-                          </TooltipTrigger>
-                          {hasOriginalTamil && originalEntry.employeeName !== entry.employeeName && (
+                      {hasOriginalTamil && originalEntry.employeeName !== entry.employeeName ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-help">{entry.employeeName}</span>
+                            </TooltipTrigger>
                             <TooltipContent>
                               <p className="text-sm">Original: {originalEntry.employeeName}</p>
                             </TooltipContent>
-                          )}
-                        </Tooltip>
-                      </TooltipProvider>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <span>{entry.employeeName}</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">{entry.employeeId}</TableCell>
                     <TableCell>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center gap-2 cursor-help">
-                              <span className="text-lg">{entry.wasteType.icon}</span>
-                              <span>{entry.wasteType.name}</span>
-                            </div>
-                          </TooltipTrigger>
-                          {hasOriginalTamil && originalEntry.wasteType.name !== entry.wasteType.name && (
+                      {hasOriginalTamil && originalEntry.wasteType.name !== entry.wasteType.name ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-2 cursor-help">
+                                <span className="text-lg">{entry.wasteType.icon}</span>
+                                <span>{entry.wasteType.name}</span>
+                              </div>
+                            </TooltipTrigger>
                             <TooltipContent>
                               <p className="text-sm">Original: {originalEntry.wasteType.name}</p>
                             </TooltipContent>
-                          )}
-                        </Tooltip>
-                      </TooltipProvider>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{entry.wasteType.icon}</span>
+                          <span>{entry.wasteType.name}</span>
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell>{entry.amount} kg</TableCell>
                     <TableCell className="text-sm">
