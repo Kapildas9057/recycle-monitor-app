@@ -9,22 +9,10 @@ import { useToast } from "@/hooks/use-toast";
 import type { WasteType, WasteEntry } from "@/types";
 
 const wasteTypes: WasteType[] = [
-  { id: 'plastic', name: 'பிளாஸ்டிக்', icon: '♻️', color: 'text-blue-500' },
-  { id: 'paper', name: 'காகிதம்', icon: '📄', color: 'text-orange-500' },
-  { id: 'organic', name: 'இயற்கை', icon: '🌱', color: 'text-green-500' },
-  { id: 'metal', name: 'உலோகம்', icon: '🔩', color: 'text-gray-500' },
-  { id: 'glass', name: 'கண்ணாடி', icon: '🫙', color: 'text-cyan-500' },
-  { id: 'electronic', name: 'மின்னணு', icon: '💻', color: 'text-purple-500' },
-  { id: 'cardboard', name: 'அட்டை', icon: '📦', color: 'text-amber-600' },
-  { id: 'textile', name: 'துணி', icon: '👕', color: 'text-pink-500' },
-  { id: 'wood', name: 'மரம்', icon: '🪵', color: 'text-yellow-700' },
-  { id: 'battery', name: 'பேட்டரி', icon: '🔋', color: 'text-red-500' },
-  { id: 'chemical', name: 'வேதியியல்', icon: '🧪', color: 'text-red-700' },
-  { id: 'food', name: 'உணவு கழிவு', icon: '🍎', color: 'text-green-600' },
-  { id: 'aluminum', name: 'அலுமினியம்', icon: '🥤', color: 'text-slate-500' },
-  { id: 'rubber', name: 'ரப்பர்', icon: '🏀', color: 'text-gray-700' },
-  { id: 'ceramic', name: 'மட்பாண்டம்', icon: '🏺', color: 'text-stone-600' },
-  { id: 'foam', name: 'நுரை', icon: '🧽', color: 'text-yellow-500' },
+  { id: 'wet', name: 'ஈரமான', icon: '💧', color: 'text-green-500' },
+  { id: 'dry', name: 'உலர்ந்த', icon: '♻️', color: 'text-blue-500' },
+  { id: 'sanitary', name: 'சுகாதாரம்', icon: '🧻', color: 'text-pink-500' },
+  { id: 'mixed', name: 'கலப்பு', icon: '🗑️', color: 'text-gray-500' },
 ];
 
 interface WasteEntryFormProps {

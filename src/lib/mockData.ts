@@ -27,22 +27,10 @@ export const mockUsers: User[] = [
 
 // Mock waste types
 export const wasteTypes: WasteType[] = [
-  { id: 'plastic', name: 'Plastic', icon: '♻️', color: 'text-blue-500' },
-  { id: 'paper', name: 'Paper', icon: '📄', color: 'text-orange-500' },
-  { id: 'organic', name: 'Organic', icon: '🌱', color: 'text-green-500' },
-  { id: 'metal', name: 'Metal', icon: '🔩', color: 'text-gray-500' },
-  { id: 'glass', name: 'Glass', icon: '🫙', color: 'text-cyan-500' },
-  { id: 'electronic', name: 'Electronic', icon: '💻', color: 'text-purple-500' },
-  { id: 'cardboard', name: 'Cardboard', icon: '📦', color: 'text-amber-600' },
-  { id: 'textile', name: 'Textile', icon: '👕', color: 'text-pink-500' },
-  { id: 'wood', name: 'Wood', icon: '🪵', color: 'text-yellow-700' },
-  { id: 'battery', name: 'Battery', icon: '🔋', color: 'text-red-500' },
-  { id: 'chemical', name: 'Chemical', icon: '🧪', color: 'text-red-700' },
-  { id: 'food', name: 'Food Waste', icon: '🍎', color: 'text-green-600' },
-  { id: 'aluminum', name: 'Aluminum', icon: '🥤', color: 'text-slate-500' },
-  { id: 'rubber', name: 'Rubber', icon: '🏀', color: 'text-gray-700' },
-  { id: 'ceramic', name: 'Ceramic', icon: '🏺', color: 'text-stone-600' },
-  { id: 'foam', name: 'Foam', icon: '🧽', color: 'text-yellow-500' },
+  { id: 'wet', name: 'Wet', icon: '💧', color: 'text-green-500' },
+  { id: 'dry', name: 'Dry', icon: '♻️', color: 'text-blue-500' },
+  { id: 'sanitary', name: 'Sanitary', icon: '🧻', color: 'text-pink-500' },
+  { id: 'mixed', name: 'Mixed', icon: '🗑️', color: 'text-gray-500' },
 ];
 
 // Generate mock waste entries
