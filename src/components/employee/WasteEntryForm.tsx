@@ -9,10 +9,10 @@ import { toast } from "@/components/ui/sonner";
 import type { WasteType, WasteEntry } from "@/types";
 
 const wasteTypes: WasteType[] = [
-  { id: 'wet', name: 'ஈரமான', icon: '💧', color: 'text-green-500' },
-  { id: 'dry', name: 'உலர்ந்த', icon: '♻️', color: 'text-blue-500' },
-  { id: 'sanitary', name: 'சுகாதாரம்', icon: '🧻', color: 'text-pink-500' },
-  { id: 'mixed', name: 'கலப்பு', icon: '🗑️', color: 'text-gray-500' },
+  { id: 'wet', name: 'Wet Waste / ஈரமான', icon: '💧', color: 'text-green-500' },
+  { id: 'dry', name: 'Dry Waste / உலர்ந்த', icon: '♻️', color: 'text-blue-500' },
+  { id: 'mixed', name: 'Mixed Waste / கலப்பு', icon: '🗑️', color: 'text-gray-500' },
+  { id: 'sanitary', name: 'Sanitary Waste / சுகாதாரம்', icon: '🧻', color: 'text-pink-500' },
 ];
 
 interface WasteEntryFormProps {
@@ -29,11 +29,30 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   
+  const CACHE_KEY = `waste-entry-${employeeId}`;
 
-  // Get current location on component mount
+  // Load cached data and get current location on component mount
   useEffect(() => {
+    // Load cached form data
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      try {
+        const { wasteType: cachedType, amount: cachedAmount } = JSON.parse(cached);
+        if (cachedType) setWasteType(cachedType);
+        if (cachedAmount) setAmount(cachedAmount);
+      } catch (e) {
+        console.error('Failed to load cached data', e);
+      }
+    }
     getCurrentLocation();
   }, []);
+
+  // Cache form data whenever it changes
+  useEffect(() => {
+    if (wasteType || amount) {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ wasteType, amount }));
+    }
+  }, [wasteType, amount]);
 
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
@@ -90,6 +109,9 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
       
       setIsSubmitted(true);
       toast("கழிவு பதிவு சமர்ப்பிக்கப்பட்டது", { description: "உங்கள் கழிவு பதிவு வெற்றிகரமாக பதிவு செய்யப்பட்டது!" });
+      
+      // Clear cache on successful submission
+      localStorage.removeItem(CACHE_KEY);
       
       // Reset form after 3 seconds
       setTimeout(() => {
