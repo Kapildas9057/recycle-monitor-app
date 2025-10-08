@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 import type { WasteEntry } from "@/types";
 
 interface ReviewTabProps {
@@ -30,7 +30,7 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
   const [entryToReject, setEntryToReject] = useState<string | null>(null);
   const [translatedEntries, setTranslatedEntries] = useState<WasteEntry[]>([]);
   const [isTranslating, setIsTranslating] = useState(true);
-  const { toast } = useToast();
+  
 
   useEffect(() => {
     const translateEntries = async () => {
@@ -82,10 +82,7 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
 
   const handleApprove = (entryId: string) => {
     onApprove(entryId);
-    toast({
-      title: "Entry Approved",
-      description: "The waste entry has been approved successfully.",
-    });
+    toast("Entry Approved", { description: "The waste entry has been approved successfully." });
   };
 
   const handleRejectClick = (entryId: string) => {
@@ -96,11 +93,7 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
   const confirmReject = () => {
     if (entryToReject) {
       onReject(entryToReject, rejectReason);
-      toast({
-        title: "Entry Rejected",
-        description: "The waste entry has been rejected.",
-        variant: "destructive",
-      });
+      toast.error("Entry Rejected", { description: "The waste entry has been rejected." });
       setShowRejectDialog(false);
       setEntryToReject(null);
       setRejectReason("");

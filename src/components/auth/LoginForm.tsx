@@ -4,7 +4,7 @@ import { InputWithIcon } from "@/components/ui/input-with-icon";
 import { EcoButton } from "@/components/ui/eco-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 import type { AuthCredentials } from "@/types";
 
 interface LoginFormProps {
@@ -16,16 +16,12 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id || !password) {
-      toast({
-        title: "Missing Information",
-        description: "Please enter both ID and password",
-        variant: "destructive",
-      });
+      toast.error("Missing Information", { description: "Please enter both ID and password" });
       return;
     }
 
@@ -33,11 +29,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
     try {
       await onLogin({ id, password, userType });
     } catch (error) {
-      toast({
-        title: "Login Failed",
-        description: "Invalid credentials. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Login Failed", { description: "Invalid credentials. Please try again." });
     } finally {
       setIsLoading(false);
     }

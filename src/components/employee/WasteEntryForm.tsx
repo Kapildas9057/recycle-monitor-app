@@ -5,7 +5,7 @@ import { EcoButton } from "@/components/ui/eco-button";
 import { InputWithIcon } from "@/components/ui/input-with-icon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 import type { WasteType, WasteEntry } from "@/types";
 
 const wasteTypes: WasteType[] = [
@@ -28,7 +28,7 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
-  const { toast } = useToast();
+  
 
   // Get current location on component mount
   useEffect(() => {
@@ -37,11 +37,7 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
 
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
-      toast({
-        title: "இடம் கிடைக்கவில்லை",
-        description: "உங்கள் சாதனம் இடம் கண்டறிதலை ஆதரிக்கவில்லை",
-        variant: "destructive",
-      });
+      toast.error("இடம் கிடைக்கவில்லை", { description: "உங்கள் சாதனம் இடம் கண்டறிதலை ஆதரிக்கவில்லை" });
       return;
     }
 
@@ -51,18 +47,11 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
         const { latitude, longitude } = position.coords;
         setLocation(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
         setIsGettingLocation(false);
-        toast({
-          title: "இடம் கண்டறியப்பட்டது",
-          description: "உங்கள் தற்போதைய இடம் பதிவு செய்யப்பட்டது",
-        });
+        toast("இடம் கண்டறியப்பட்டது", { description: "உங்கள் தற்போதைய இடம் பதிவு செய்யப்பட்டது" });
       },
       (error) => {
         setIsGettingLocation(false);
-        toast({
-          title: "இடம் கண்டறிதல் பிழை",
-          description: "உங்கள் இடத்தைப் பெற முடியவில்லை. அனுமதிகளைச் சரிபார்க்கவும்",
-          variant: "destructive",
-        });
+        toast.error("இடம் கண்டறிதல் பிழை", { description: "உங்கள் இடத்தைப் பெற முடியவில்லை. அனுமதிகளைச் சரிபார்க்கவும்" });
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
@@ -72,10 +61,7 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
     const file = e.target.files?.[0];
     if (file) {
       setImage(file);
-      toast({
-        title: "புகைப்படம் எடுக்கப்பட்டது",
-        description: "புகைப்படம் பதிவேற்றத்திற்கு தயார்",
-      });
+      toast("புகைப்படம் எடுக்கப்பட்டது", { description: "புகைப்படம் பதிவேற்றத்திற்கு தயார்" });
     }
   };
 
@@ -83,11 +69,7 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
     e.preventDefault();
     
     if (!wasteType || !amount) {
-      toast({
-        title: "தகவல் இல்லை",
-        description: "தயவுசெய்து அனைத்து தேவையான புலங்களையும் நிரப்பவும்",
-        variant: "destructive",
-      });
+      toast.error("தகவல் இல்லை", { description: "தயவுசெய்து அனைத்து தேவையான புலங்களையும் நிரப்பவும்" });
       return;
     }
 
@@ -107,10 +89,7 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
       });
       
       setIsSubmitted(true);
-      toast({
-        title: "கழிவு பதிவு சமர்ப்பிக்கப்பட்டது",
-        description: "உங்கள் கழிவு பதிவு வெற்றிகரமாக பதிவு செய்யப்பட்டது!",
-      });
+      toast("கழிவு பதிவு சமர்ப்பிக்கப்பட்டது", { description: "உங்கள் கழிவு பதிவு வெற்றிகரமாக பதிவு செய்யப்பட்டது!" });
       
       // Reset form after 3 seconds
       setTimeout(() => {
@@ -122,11 +101,7 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
       }, 3000);
       
     } catch (error) {
-      toast({
-        title: "சமர்ப்பிப்பு தோல்வி",
-        description: "கழிவு பதிவை சமர்ப்பிக்க முடியவில்லை. தயவுசெய்து மீண்டும் முயற்சிக்கவும்.",
-        variant: "destructive",
-      });
+      toast.error("சமர்ப்பிப்பு தோல்வி", { description: "கழிவு பதிவை சமர்ப்பிக்க முடியவில்லை. தயவுசெய்து மீண்டும் முயற்சிக்கவும்." });
     } finally {
       setIsSubmitting(false);
     }
