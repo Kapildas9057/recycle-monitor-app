@@ -17,7 +17,7 @@ const wasteTypes: WasteType[] = [
 
 interface WasteEntryFormProps {
   employeeId: string;
-  onSubmit: (entry: Omit<WasteEntry, 'id' | 'employeeName' | 'status'>) => Promise<void>;
+  onSubmit: (entry: Omit<WasteEntry, 'id' | 'employeeName' | 'status'>, imageFile?: File) => Promise<void>;
 }
 
 export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormProps) {
@@ -98,14 +98,16 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
     setIsSubmitting(true);
     
     try {
-      await onSubmit({
-        employeeId,
-        wasteType: selectedWasteType,
-        amount: parseFloat(amount),
-        dateTime: new Date().toISOString(),
-        location: location || undefined,
-        imageUrl: image ? URL.createObjectURL(image) : undefined,
-      });
+      await onSubmit(
+        {
+          employeeId,
+          wasteType: selectedWasteType,
+          amount: parseFloat(amount),
+          dateTime: new Date().toISOString(),
+          location: location || undefined,
+        },
+        image || undefined
+      );
       
       setIsSubmitted(true);
       toast("கழிவு பதிவு சமர்ப்பிக்கப்பட்டது", { description: "உங்கள் கழிவு பதிவு வெற்றிகரமாக பதிவு செய்யப்பட்டது!" });
