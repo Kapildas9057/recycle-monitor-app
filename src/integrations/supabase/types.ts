@@ -14,7 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      waste_entries: {
+        Row: {
+          amount: number
+          created_at: string
+          date_time: string
+          employee_id: string
+          employee_name: string | null
+          id: string
+          image_url: string | null
+          location: string | null
+          status: string | null
+          updated_at: string
+          waste_type: Json
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          date_time: string
+          employee_id: string
+          employee_name?: string | null
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          status?: string | null
+          updated_at?: string
+          waste_type: Json
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          date_time?: string
+          employee_id?: string
+          employee_name?: string | null
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          status?: string | null
+          updated_at?: string
+          waste_type?: Json
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
