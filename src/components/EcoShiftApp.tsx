@@ -7,22 +7,64 @@ import { supabase } from "@/integrations/supabase/client";
 import { getStoredEntries, saveEntry, updateEntryStatus, clearAllEntries } from "@/utils/storage";
 import { 
   calculateSummaryData, 
-  calculateLeaderboard, 
-  authenticateUser,
-  mockUsers
+  calculateLeaderboard
 } from "@/lib/mockData";
-import type { User, WasteEntry, AuthCredentials } from "@/types";
+import type { WasteEntry } from "@/types";
 import { toast } from "sonner";
+import { User as SupabaseUser, Session } from "@supabase/supabase-js";
+
+interface AppUser {
+  id: string;
+  name: string;
+  type: 'employee' | 'admin';
+  employeeId?: string;
+}
 
 export default function EcoShiftApp() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [wasteEntries, setWasteEntries] = useState<WasteEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load entries from Supabase on mount
+  // Set up auth state listener
   useEffect(() => {
-    loadEntries();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          setTimeout(() => {
+            loadUserProfile(session.user.id);
+          }, 0);
+        } else {
+          setCurrentUser(null);
+          setIsLoading(false);
+        }
+      }
+    );
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        loadUserProfile(session.user.id);
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  // Load entries when user is authenticated
+  useEffect(() => {
+    if (currentUser) {
+      loadEntries();
+    }
+  }, [currentUser]);
 
   // Set up real-time subscription
   useEffect(() => {
@@ -48,6 +90,32 @@ export default function EcoShiftApp() {
     };
   }, []);
 
+  const loadUserProfile = async (userId: string) => {
+    try {
+      const { data: profile, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) throw error;
+
+      if (profile) {
+        setCurrentUser({
+          id: userId,
+          name: profile.name,
+          type: profile.role as 'employee' | 'admin',
+          employeeId: profile.employee_id,
+        });
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+      toast.error('Failed to load user profile');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const loadEntries = async () => {
     try {
       const entries = await getStoredEntries();
@@ -55,35 +123,36 @@ export default function EcoShiftApp() {
     } catch (error) {
       console.error('Error loading entries:', error);
       toast.error('Failed to load waste entries');
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const handleLogin = async (credentials: AuthCredentials) => {
-    const user = await authenticateUser(credentials.id, credentials.password, credentials.userType);
-    if (user) {
-      setCurrentUser(user);
-    } else {
-      throw new Error("Invalid credentials");
-    }
+  const handleLogin = (user: SupabaseUser, role: string, employeeId: string, name: string) => {
+    setCurrentUser({
+      id: user.id,
+      name,
+      type: role as 'employee' | 'admin',
+      employeeId,
+    });
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setCurrentUser(null);
+    setUser(null);
+    setSession(null);
   };
 
   const handleWasteSubmission = async (
     entryData: Omit<WasteEntry, 'id' | 'employeeName' | 'status'>,
     imageFile?: File
   ) => {
-    const employee = mockUsers.find(u => u.id === entryData.employeeId);
-    if (!employee) throw new Error("Employee not found");
+    if (!currentUser) throw new Error("User not authenticated");
 
     await saveEntry(
       {
         ...entryData,
-        employeeName: employee.name,
+        employeeName: currentUser.name,
+        employeeId: currentUser.employeeId || entryData.employeeId,
       },
       imageFile
     );
@@ -124,6 +193,14 @@ export default function EcoShiftApp() {
   const summaryData = calculateSummaryData(wasteEntries);
   const leaderboardData = calculateLeaderboard(wasteEntries);
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-accent/20 flex items-center justify-center">
+        <p className="text-lg">Loading...</p>
+      </div>
+    );
+  }
+
   if (!currentUser) {
     return <LoginForm onLogin={handleLogin} />;
   }
@@ -141,7 +218,7 @@ export default function EcoShiftApp() {
             </button>
           </div>
           <WasteEntryForm 
-            employeeId={currentUser.id} 
+            employeeId={currentUser.employeeId || currentUser.id} 
             onSubmit={handleWasteSubmission} 
           />
         </div>
@@ -153,9 +230,7 @@ export default function EcoShiftApp() {
               <CardTitle className="text-xl font-display">Recent Submissions / சமீபத்திய சமர்ப்பிப்புகள்</CardTitle>
             </CardHeader>
             <CardContent>
-              {isLoading ? (
-                <p className="text-muted-foreground text-center py-4">Loading...</p>
-              ) : wasteEntries.length === 0 ? (
+              {wasteEntries.length === 0 ? (
                 <p className="text-muted-foreground text-center py-4">
                   No entries yet / இன்னும் பதிவுகள் இல்லை
                 </p>
