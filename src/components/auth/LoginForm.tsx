@@ -75,22 +75,22 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
           .from('user_profiles')
           .select('*')
           .eq('user_id', authData.user.id)
-          .single();
+          .maybeSingle();
 
         if (profileError) throw profileError;
         if (!profile) throw new Error("User profile not found");
 
-        // Get user role from user_roles table
+        // Get user role from user_roles table - may not exist for legacy users
         const { data: roleData, error: roleError } = await supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', authData.user.id)
-          .single();
+          .maybeSingle();
 
         if (roleError) throw roleError;
-        if (!roleData) throw new Error("User role not found");
 
-        const role = roleData.role === 'admin' ? 'admin' : 'employee';
+        // Default to 'employee' if no role found (legacy users)
+        const role = roleData?.role === 'admin' ? 'admin' : 'employee';
         onLogin(authData.user, role, profile.employee_id, profile.name);
         toast.success(role === "admin" ? "Admin login successful" : "Login successful");
       }

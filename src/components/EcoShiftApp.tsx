@@ -95,22 +95,22 @@ export default function EcoShiftApp() {
         .from('user_profiles')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (profileError) throw profileError;
       if (!profile) throw new Error("Profile not found");
 
-      // Get user role from user_roles table
+      // Get user role from user_roles table - may not exist for legacy users
       const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (roleError) throw roleError;
-      if (!roleData) throw new Error("Role not found");
 
-      const userType = roleData.role === 'admin' ? 'admin' : 'employee';
+      // Default to 'employee' if no role found (legacy users)
+      const userType = roleData?.role === 'admin' ? 'admin' : 'employee';
 
       setCurrentUser({
         id: userId,
