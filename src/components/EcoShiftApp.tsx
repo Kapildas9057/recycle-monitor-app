@@ -98,7 +98,11 @@ export default function EcoShiftApp() {
         .maybeSingle();
 
       if (profileError) throw profileError;
-      if (!profile) throw new Error("Profile not found");
+      if (!profile) {
+        toast.error('Profile not found');
+        setIsLoading(false);
+        return;
+      }
 
       // Get user role from user_roles table - may not exist for legacy users
       const { data: roleData, error: roleError } = await supabase
@@ -107,7 +111,11 @@ export default function EcoShiftApp() {
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (roleError) throw roleError;
+      if (roleError) {
+        toast.error('Failed to load user role');
+        setIsLoading(false);
+        return;
+      }
 
       // Default to 'employee' if no role found (legacy users)
       const userType = roleData?.role === 'admin' ? 'admin' : 'employee';
