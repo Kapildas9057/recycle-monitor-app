@@ -37,7 +37,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
     setIsLoading(true);
     try {
       if (isSignUp) {
-        // Sign up
+        // Sign up - profile and role will be created automatically by database trigger
         const { data: authData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -46,25 +46,13 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
             data: {
               name,
               employee_id: employeeId,
-              role: userType,
+              role: userType === 'admin' ? 'admin' : 'user',
             }
           }
         });
 
         if (signUpError) throw signUpError;
         if (!authData.user) throw new Error("Sign up failed");
-
-        // Create user profile
-        const { error: profileError } = await supabase
-          .from('user_profiles')
-          .insert([{
-            user_id: authData.user.id,
-            employee_id: employeeId,
-            name,
-            role: userType,
-          }]);
-
-        if (profileError) throw profileError;
 
         toast.success("Account created successfully! Please sign in.");
         setIsSignUp(false);
@@ -92,12 +80,23 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         if (profileError) throw profileError;
         if (!profile) throw new Error("User profile not found");
 
-        onLogin(authData.user, profile.role, profile.employee_id, profile.name);
-        toast.success(profile.role === "admin" ? "Admin login successful" : "Login successful");
+        // Get user role from user_roles table
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', authData.user.id)
+          .single();
+
+        if (roleError) throw roleError;
+        if (!roleData) throw new Error("User role not found");
+
+        const role = roleData.role === 'admin' ? 'admin' : 'employee';
+        onLogin(authData.user, role, profile.employee_id, profile.name);
+        toast.success(role === "admin" ? "Admin login successful" : "Login successful");
       }
     } catch (error: any) {
-      console.error('Auth error:', error);
-      toast.error(error.message || "Authentication failed. Please try again.");
+      const errorMessage = error?.message || "Authentication failed";
+      toast.error(errorMessage.includes("Invalid") ? "Invalid email or password" : "Authentication failed. Please try again.");
     } finally {
       setIsLoading(false);
     }

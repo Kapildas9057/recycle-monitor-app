@@ -47,8 +47,7 @@ export async function getStoredEntries(): Promise<WasteEntry[]> {
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('Error fetching waste entries:', error);
-    throw error;
+    throw new Error('Failed to load waste entries');
   }
 
   return (data as DatabaseWasteEntry[]).map(dbToWasteEntry);
@@ -67,8 +66,7 @@ export async function uploadImage(file: File, employeeId: string): Promise<strin
     .upload(filePath, file);
 
   if (uploadError) {
-    console.error('Error uploading image:', uploadError);
-    throw uploadError;
+    throw new Error('Failed to upload image');
   }
 
   // Get public URL
@@ -109,8 +107,7 @@ export async function saveEntry(
     .single();
 
   if (error) {
-    console.error('Error saving waste entry:', error);
-    throw error;
+    throw new Error('Failed to save waste entry');
   }
 
   return dbToWasteEntry(data as DatabaseWasteEntry);
@@ -129,8 +126,7 @@ export async function updateEntryStatus(
     .eq('id', entryId);
 
   if (error) {
-    console.error('Error updating entry status:', error);
-    throw error;
+    throw new Error('Failed to update entry status');
   }
 }
 
@@ -144,7 +140,6 @@ export async function clearAllEntries(): Promise<void> {
     .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
 
   if (error) {
-    console.error('Error clearing entries:', error);
-    throw error;
+    throw new Error('Failed to clear entries');
   }
 }

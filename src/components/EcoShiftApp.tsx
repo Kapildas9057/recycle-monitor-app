@@ -77,8 +77,7 @@ export default function EcoShiftApp() {
           schema: 'public',
           table: 'waste_entries'
         },
-        (payload) => {
-          console.log('Realtime update:', payload);
+        () => {
           // Reload entries on any change
           loadEntries();
         }
@@ -92,24 +91,34 @@ export default function EcoShiftApp() {
 
   const loadUserProfile = async (userId: string) => {
     try {
-      const { data: profile, error } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('user_id', userId)
         .single();
 
-      if (error) throw error;
+      if (profileError) throw profileError;
+      if (!profile) throw new Error("Profile not found");
 
-      if (profile) {
-        setCurrentUser({
-          id: userId,
-          name: profile.name,
-          type: profile.role as 'employee' | 'admin',
-          employeeId: profile.employee_id,
-        });
-      }
+      // Get user role from user_roles table
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .single();
+
+      if (roleError) throw roleError;
+      if (!roleData) throw new Error("Role not found");
+
+      const userType = roleData.role === 'admin' ? 'admin' : 'employee';
+
+      setCurrentUser({
+        id: userId,
+        name: profile.name,
+        type: userType,
+        employeeId: profile.employee_id,
+      });
     } catch (error) {
-      console.error('Error loading user profile:', error);
       toast.error('Failed to load user profile');
     } finally {
       setIsLoading(false);
@@ -121,7 +130,6 @@ export default function EcoShiftApp() {
       const entries = await getStoredEntries();
       setWasteEntries(entries);
     } catch (error) {
-      console.error('Error loading entries:', error);
       toast.error('Failed to load waste entries');
     }
   };
@@ -164,7 +172,6 @@ export default function EcoShiftApp() {
       await updateEntryStatus(entryId, 'approved');
       // Entries will be updated via realtime subscription
     } catch (error) {
-      console.error('Error approving entry:', error);
       toast.error('Failed to approve entry');
     }
   };
@@ -174,7 +181,6 @@ export default function EcoShiftApp() {
       await updateEntryStatus(entryId, 'rejected');
       // Entries will be updated via realtime subscription
     } catch (error) {
-      console.error('Error rejecting entry:', error);
       toast.error('Failed to reject entry');
     }
   };
@@ -184,7 +190,6 @@ export default function EcoShiftApp() {
       await clearAllEntries();
       // Entries will be updated via realtime subscription
     } catch (error) {
-      console.error('Error clearing data:', error);
       toast.error('Failed to clear data');
     }
   };
