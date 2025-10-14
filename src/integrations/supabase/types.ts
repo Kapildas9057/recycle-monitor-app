@@ -109,8 +109,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_email_by_employee_id: {
+        Args: { emp_id: string }
+        Returns: string
+      }
       get_employee_id: {
         Args: { user_uuid: string }
+        Returns: string
+      }
+      get_next_employee_id: {
+        Args: { prefix: string }
         Returns: string
       }
       has_role: {

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { UserCheck, Lock, Mail, User, IdCard } from "lucide-react";
+import { UserCheck, Lock, Mail, User, IdCard, KeyRound } from "lucide-react";
 import { InputWithIcon } from "@/components/ui/input-with-icon";
 import { EcoButton } from "@/components/ui/eco-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +7,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { User as SupabaseUser } from "@supabase/supabase-js";
+import { generateEmployeeId, getEmailByEmployeeId, validateEmployeeId } from "@/utils/authHelpers";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface LoginFormProps {
   onLogin: (user: SupabaseUser, role: string, employeeId: string, name: string) => void;
@@ -14,22 +24,25 @@ interface LoginFormProps {
 
 export default function LoginForm({ onLogin }: LoginFormProps) {
   const [userType, setUserType] = useState<'employee' | 'admin'>('employee');
-  const [email, setEmail] = useState('');
+  const [loginId, setLoginId] = useState(''); // Can be email or employee ID
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [employeeId, setEmployeeId] = useState('');
+  const [email, setEmail] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !password) {
-      toast.error("Please enter both email and password");
+    if (!loginId || !password) {
+      toast.error("Please enter both ID and password");
       return;
     }
 
-    if (isSignUp && (!name || !employeeId)) {
+    if (isSignUp && (!name || !email)) {
       toast.error("Please fill in all fields");
       return;
     }
@@ -37,6 +50,9 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
     setIsLoading(true);
     try {
       if (isSignUp) {
+        // Generate employee ID automatically
+        const generatedId = await generateEmployeeId(userType);
+        
         // Sign up - profile and role will be created automatically by database trigger
         const { data: authData, error: signUpError } = await supabase.auth.signUp({
           email,
@@ -45,8 +61,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
             emailRedirectTo: `${window.location.origin}/`,
             data: {
               name,
-              employee_id: employeeId,
-              role: userType === 'admin' ? 'admin' : 'user',
+              employee_id: generatedId,
             }
           }
         });
@@ -54,16 +69,29 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         if (signUpError) throw signUpError;
         if (!authData.user) throw new Error("Sign up failed");
 
-        toast.success("Account created successfully! Please sign in.");
+        toast.success(`Account created! Your ID is: ${generatedId}. Please save it for login.`);
         setIsSignUp(false);
-        setEmail('');
+        setLoginId('');
         setPassword('');
         setName('');
-        setEmployeeId('');
+        setEmail('');
       } else {
-        // Sign in
+        // Sign in - support both email and employee ID
+        let emailToUse = loginId;
+        
+        // If login ID matches employee ID pattern, get the email
+        if (validateEmployeeId(loginId)) {
+          const foundEmail = await getEmailByEmployeeId(loginId);
+          if (!foundEmail) {
+            toast.error("Invalid employee ID");
+            setIsLoading(false);
+            return;
+          }
+          emailToUse = foundEmail;
+        }
+
         const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
-          email,
+          email: emailToUse,
           password,
         });
 
@@ -80,7 +108,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         if (profileError) throw profileError;
         if (!profile) throw new Error("User profile not found");
 
-        // Get user role from user_roles table - may not exist for legacy users
+        // Get user role from user_roles table
         const { data: roleData, error: roleError } = await supabase
           .from('user_roles')
           .select('role')
@@ -89,16 +117,40 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
 
         if (roleError) throw roleError;
 
-        // Default to 'employee' if no role found (legacy users)
+        // Map database role to UI role
         const role = roleData?.role === 'admin' ? 'admin' : 'employee';
         onLogin(authData.user, role, profile.employee_id, profile.name);
         toast.success(role === "admin" ? "Admin login successful" : "Login successful");
       }
     } catch (error: any) {
       const errorMessage = error?.message || "Authentication failed";
-      toast.error(errorMessage.includes("Invalid") ? "Invalid email or password" : "Authentication failed. Please try again.");
+      toast.error(errorMessage.includes("Invalid") ? "Invalid ID or password" : "Authentication failed. Please try again.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!resetEmail) {
+      toast.error("Please enter your email address");
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/`,
+      });
+
+      if (error) throw error;
+
+      toast.success("Password reset link sent to your email!");
+      setShowForgotPassword(false);
+      setResetEmail('');
+    } catch (error: any) {
+      toast.error(error.message || "Failed to send reset email");
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -127,7 +179,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
             </TabsList>
             
             <form onSubmit={handleSubmit} className="space-y-4">
-              {isSignUp && (
+              {isSignUp ? (
                 <>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Full Name</label>
@@ -141,44 +193,99 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
                   </div>
 
                   <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Email</label>
+                    <InputWithIcon
+                      icon={<Mail className="w-4 h-4" />}
+                      type="email"
+                      placeholder="your@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Password</label>
+                    <InputWithIcon
+                      icon={<Lock className="w-4 h-4" />}
+                      type="password"
+                      placeholder="Enter your password (min 6 characters)"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={6}
+                    />
+                  </div>
+
+                  <div className="p-3 bg-accent/20 rounded-lg">
+                    <p className="text-xs text-muted-foreground">
+                      Your unique ID will be automatically generated after signup.
+                      {userType === 'admin' ? ' (ADM format)' : ' (EMP format)'}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">
-                      {userType === 'admin' ? 'Admin ID' : 'Employee ID'}
+                      Employee/Admin ID or Email
                     </label>
                     <InputWithIcon
                       icon={<IdCard className="w-4 h-4" />}
-                      placeholder={userType === 'admin' ? 'e.g., ADM001' : 'e.g., EMP001'}
-                      value={employeeId}
-                      onChange={(e) => setEmployeeId(e.target.value)}
+                      placeholder="EMP001 or your@email.com"
+                      value={loginId}
+                      onChange={(e) => setLoginId(e.target.value)}
                       required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-foreground">Password</label>
+                      <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
+                        <DialogTrigger asChild>
+                          <Button variant="link" className="h-auto p-0 text-xs">
+                            Forgot password?
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Reset Password</DialogTitle>
+                            <DialogDescription>
+                              Enter your email address and we'll send you a password reset link.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4 pt-4">
+                            <InputWithIcon
+                              icon={<Mail className="w-4 h-4" />}
+                              type="email"
+                              placeholder="your@email.com"
+                              value={resetEmail}
+                              onChange={(e) => setResetEmail(e.target.value)}
+                            />
+                            <Button 
+                              onClick={handleForgotPassword}
+                              disabled={isResetting}
+                              className="w-full"
+                            >
+                              {isResetting ? "Sending..." : "Send Reset Link"}
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                    <InputWithIcon
+                      icon={<Lock className="w-4 h-4" />}
+                      type="password"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={6}
                     />
                   </div>
                 </>
               )}
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Email</label>
-                <InputWithIcon
-                  icon={<Mail className="w-4 h-4" />}
-                  type="email"
-                  placeholder="your@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Password</label>
-                <InputWithIcon
-                  icon={<Lock className="w-4 h-4" />}
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                />
-              </div>
               
               <EcoButton 
                 type="submit" 
@@ -194,7 +301,13 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
 
               <button
                 type="button"
-                onClick={() => setIsSignUp(!isSignUp)}
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setLoginId('');
+                  setPassword('');
+                  setName('');
+                  setEmail('');
+                }}
                 className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 {isSignUp 
