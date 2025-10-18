@@ -35,58 +35,210 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
   const [isResetting, setIsResetting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    // ✅ Separate validation for Sign In and Sign Up
-    if (!isSignUp && (!loginId || !password)) {
-      toast.error("Please enter both ID and password");
-      return;
-    }
+  if (!isSignUp && (!loginId || !password)) {
+    toast.error("Please enter both ID/email and password");
+    return;
+  }
 
-    if (isSignUp && (!name || !email || !password)) {
-      toast.error("Please fill in all fields");
-      return;
-    }
+  if (isSignUp && (!name || !email || !password)) {
+    toast.error("Please fill in all required fields");
+    return;
+  }
 
-    setIsLoading(true);
-    try {
-      if (isSignUp) {
-        // Generate employee ID automatically
-        const generatedId = await generateEmployeeId(userType);
+  setIsLoading(true);
 
-        // Sign up - profile and role will be created automatically by database trigger
-        const { data: authData, error: signUpError } = await supabase.auth.signUp({
+  try {
+    if (isSignUp) {
+      // 🟢 SIGN UP FLOW
+      const generatedId = await generateEmployeeId(userType);
+
+      // 1️⃣ Create user in Supabase Auth
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: { name, role: userType },
+        },
+      });
+
+      if (signUpError) throw signUpError;
+
+      const authUser = signUpData?.user;
+
+      // If no user returned, ask for email verification
+      if (!authUser) {
+        toast.info(
+          `Account created! Please verify your email (${email}). After verification, your ${userType} ID will be ${generatedId}.`
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      // 2️⃣ Insert matching row in your "users" table
+      const { error: insertError } = await supabase.from("users").insert([
+        {
+          id: authUser.id, // match Supabase Auth user id
           email,
+          employee_id: generatedId,
+          role: userType,
+          password_hash: "auth-managed", // placeholder (Auth handles the real hash)
+          email_verified: !!authUser.email_confirmed_at,
+        },
+      ]);
+
+      if (insertError) throw insertError;
+
+      toast.success(
+        `Account created successfully! Your ${userType.toUpperCase()} ID is: ${generatedId}. Save it for login.`
+      );
+
+      // Reset form
+      setIsSignUp(false);
+      setName("");
+      setEmail("");
+      setPassword("");
+    } else {
+      // 🔵 SIGN IN FLOW
+      let emailToUse = loginId;
+
+      // Support login by Employee ID
+      if (validateEmployeeId(loginId)) {
+        const foundEmail = await getEmailByEmployeeId(loginId);
+        if (!foundEmail) {
+          toast.error("Invalid employee ID");
+          setIsLoading(false);
+          return;
+        }
+        emailToUse = foundEmail;
+      }
+
+      const { data: signInData, error: signInError } =
+        await supabase.auth.signInWithPassword({
+          email: emailToUse,
           password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/`,
-            data: {
-              name,
-              employee_id: generatedId,
-            },
-          },
         });
 
-        if (signUpError) throw signUpError;
-        if (!authData.user) throw new Error("Sign up failed");
+      if (signInError) throw signInError;
+      const user = signInData?.user;
+      if (!user) throw new Error("Sign in failed");
 
-        toast.success(
-          `Account created successfully! Your ${userType} ID is: ${generatedId}. Please save it for login.`
-        );
+      // Fetch matching user info
+      const { data: dbUser, error: dbError } = await supabase
+        .from("users")
+        .select("employee_id, role, email")
+        .eq("id", user.id)
+        .maybeSingle();
 
-        // Reset form after signup
+      if (dbError) throw dbError;
+      if (!dbUser) throw new Error("User record not found in database");
+
+      const role = dbUser.role === "admin" ? "admin" : "employee";
+      onLogin(user, role, dbUser.employee_id, dbUser.email);
+
+      toast.success(role === "admin" ? "Admin login successful" : "Login successful");
+    }
+  } catch (error: any) {
+    console.error(error);
+    toast.error(
+      error.message?.includes("Invalid")
+        ? "Invalid ID or password"
+        : error.message || "Authentication failed"
+    );
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
+
+        // 3) Insert into public.users (app-level users table)
+        const { error: insertUserErr } = await supabase.from("users").insert([
+          {
+            id: userId,
+            email,
+            employee_id: generatedId,
+            role: userType,
+            password_hash: "auth-managed", // placeholder; Supabase Auth stores the real hash
+            email_verified: authUser.email_confirmed_at ? true : false,
+          },
+        ]);
+
+        if (insertUserErr) throw insertUserErr;
+
+        // 4) Insert into user_profiles
+        const { error: profileErr } = await supabase.from("user_profiles").insert([
+          {
+            user_id: userId,
+            name,
+            employee_id: generatedId,
+          },
+        ]);
+
+        if (profileErr) throw profileErr;
+
+        // 5) Insert into user_roles
+        const { error: roleErr } = await supabase.from("user_roles").insert([
+          {
+            user_id: userId,
+            role: userType,
+          },
+        ]);
+
+        if (roleErr) throw roleErr;
+
+        // 6) Try to auto sign-in (if email confirmation not required)
+        try {
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+
+          if (signInError) {
+            // Not fatal — may require email verification. Show friendly message.
+            toast.success(`Account created! Your ${userType} ID is ${generatedId}. Please verify your email before logging in.`);
+          } else {
+            // If signInData.user exists, proceed to fetch profile & role and call onLogin
+            const signedInUser = signInData.user;
+            // fetch profile and role
+            const { data: profile } = await supabase
+              .from("user_profiles")
+              .select("*")
+              .eq("user_id", signedInUser.id)
+              .maybeSingle();
+
+            const { data: roleData } = await supabase
+              .from("user_roles")
+              .select("role")
+              .eq("user_id", signedInUser.id)
+              .maybeSingle();
+
+            const role = roleData?.role || userType;
+            onLogin(signedInUser, role, profile?.employee_id || generatedId, profile?.name || name);
+            toast.success(`Welcome! Account created and signed in as ${role}.`);
+          }
+        } catch (err) {
+          // ignore; handled above
+        }
+
+        // Reset form
         setIsSignUp(false);
         setLoginId("");
         setPassword("");
         setName("");
         setEmail("");
-      } else {
-        // Sign in - support both email and employee ID
-        let emailToUse = loginId;
 
-        // If login ID matches employee ID pattern, get the email
-        if (validateEmployeeId(loginId)) {
-          const foundEmail = await getEmailByEmployeeId(loginId);
+      } else {
+        // ---------------------------
+        // SIGN IN FLOW
+        // ---------------------------
+        let emailToUse = loginId.trim();
+
+        // If loginId looks like employee/admin ID (EMPxxxx or ADMxxxx), resolve to email
+        if (validateEmployeeId(loginId.trim())) {
+          const foundEmail = await getEmailByEmployeeId(loginId.trim());
           if (!foundEmail) {
             toast.error("Invalid employee ID");
             setIsLoading(false);
@@ -95,16 +247,16 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
           emailToUse = foundEmail;
         }
 
-        const { data: authData, error: signInError } =
-          await supabase.auth.signInWithPassword({
-            email: emailToUse,
-            password,
-          });
+        // sign in
+        const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: emailToUse,
+          password,
+        });
 
         if (signInError) throw signInError;
         if (!authData.user) throw new Error("Sign in failed");
 
-        // Get user profile
+        // fetch profile
         const { data: profile, error: profileError } = await supabase
           .from("user_profiles")
           .select("*")
@@ -114,7 +266,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         if (profileError) throw profileError;
         if (!profile) throw new Error("User profile not found");
 
-        // Get user role from user_roles table
+        // fetch role
         const { data: roleData, error: roleError } = await supabase
           .from("user_roles")
           .select("role")
@@ -123,20 +275,18 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
 
         if (roleError) throw roleError;
 
-        // Map database role to UI role
         const role = roleData?.role === "admin" ? "admin" : "employee";
         onLogin(authData.user, role, profile.employee_id, profile.name);
-        toast.success(
-          role === "admin" ? "Admin login successful" : "Login successful"
-        );
+        toast.success(role === "admin" ? "Admin login successful" : "Login successful");
       }
     } catch (error: any) {
       const errorMessage = error?.message || "Authentication failed";
-      toast.error(
-        errorMessage.includes("Invalid")
-          ? "Invalid ID or password"
-          : "Authentication failed. Please try again."
-      );
+      // make message user-friendly where possible
+      if (errorMessage.toLowerCase().includes("invalid login") || errorMessage.toLowerCase().includes("invalid email")) {
+        toast.error("Invalid ID/email or password");
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -329,4 +479,3 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
     </div>
   );
 }
-
