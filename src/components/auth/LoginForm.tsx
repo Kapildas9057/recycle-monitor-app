@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { UserCheck, Lock, Mail, User, IdCard, KeyRound } from "lucide-react";
+import { UserCheck, Lock, Mail, User, IdCard } from "lucide-react";
 import { InputWithIcon } from "@/components/ui/input-with-icon";
 import { EcoButton } from "@/components/ui/eco-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { User as SupabaseUser } from "@supabase/supabase-js";
@@ -23,26 +23,27 @@ interface LoginFormProps {
 }
 
 export default function LoginForm({ onLogin }: LoginFormProps) {
-  const [userType, setUserType] = useState<'employee' | 'admin'>('employee');
-  const [loginId, setLoginId] = useState(''); // Can be email or employee ID
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [userType, setUserType] = useState<"employee" | "admin">("employee");
+  const [loginId, setLoginId] = useState(""); // Can be email or employee ID
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [resetEmail, setResetEmail] = useState('');
+  const [resetEmail, setResetEmail] = useState("");
   const [isResetting, setIsResetting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!loginId || !password) {
+
+    // ✅ Separate validation for Sign In and Sign Up
+    if (!isSignUp && (!loginId || !password)) {
       toast.error("Please enter both ID and password");
       return;
     }
 
-    if (isSignUp && (!name || !email)) {
+    if (isSignUp && (!name || !email || !password)) {
       toast.error("Please fill in all fields");
       return;
     }
@@ -52,7 +53,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
       if (isSignUp) {
         // Generate employee ID automatically
         const generatedId = await generateEmployeeId(userType);
-        
+
         // Sign up - profile and role will be created automatically by database trigger
         const { data: authData, error: signUpError } = await supabase.auth.signUp({
           email,
@@ -62,23 +63,27 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
             data: {
               name,
               employee_id: generatedId,
-            }
-          }
+            },
+          },
         });
 
         if (signUpError) throw signUpError;
         if (!authData.user) throw new Error("Sign up failed");
 
-        toast.success(`Account created! Your ID is: ${generatedId}. Please save it for login.`);
+        toast.success(
+          `Account created successfully! Your ${userType} ID is: ${generatedId}. Please save it for login.`
+        );
+
+        // Reset form after signup
         setIsSignUp(false);
-        setLoginId('');
-        setPassword('');
-        setName('');
-        setEmail('');
+        setLoginId("");
+        setPassword("");
+        setName("");
+        setEmail("");
       } else {
         // Sign in - support both email and employee ID
         let emailToUse = loginId;
-        
+
         // If login ID matches employee ID pattern, get the email
         if (validateEmployeeId(loginId)) {
           const foundEmail = await getEmailByEmployeeId(loginId);
@@ -90,19 +95,20 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
           emailToUse = foundEmail;
         }
 
-        const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
-          email: emailToUse,
-          password,
-        });
+        const { data: authData, error: signInError } =
+          await supabase.auth.signInWithPassword({
+            email: emailToUse,
+            password,
+          });
 
         if (signInError) throw signInError;
         if (!authData.user) throw new Error("Sign in failed");
 
         // Get user profile
         const { data: profile, error: profileError } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('user_id', authData.user.id)
+          .from("user_profiles")
+          .select("*")
+          .eq("user_id", authData.user.id)
           .maybeSingle();
 
         if (profileError) throw profileError;
@@ -110,21 +116,27 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
 
         // Get user role from user_roles table
         const { data: roleData, error: roleError } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', authData.user.id)
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", authData.user.id)
           .maybeSingle();
 
         if (roleError) throw roleError;
 
         // Map database role to UI role
-        const role = roleData?.role === 'admin' ? 'admin' : 'employee';
+        const role = roleData?.role === "admin" ? "admin" : "employee";
         onLogin(authData.user, role, profile.employee_id, profile.name);
-        toast.success(role === "admin" ? "Admin login successful" : "Login successful");
+        toast.success(
+          role === "admin" ? "Admin login successful" : "Login successful"
+        );
       }
     } catch (error: any) {
       const errorMessage = error?.message || "Authentication failed";
-      toast.error(errorMessage.includes("Invalid") ? "Invalid ID or password" : "Authentication failed. Please try again.");
+      toast.error(
+        errorMessage.includes("Invalid")
+          ? "Invalid ID or password"
+          : "Authentication failed. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -146,7 +158,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
 
       toast.success("Password reset link sent to your email!");
       setShowForgotPassword(false);
-      setResetEmail('');
+      setResetEmail("");
     } catch (error: any) {
       toast.error(error.message || "Failed to send reset email");
     } finally {
@@ -170,14 +182,14 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
             </CardDescription>
           </div>
         </CardHeader>
-        
+
         <CardContent>
-          <Tabs value={userType} onValueChange={(value) => setUserType(value as 'employee' | 'admin')}>
+          <Tabs value={userType} onValueChange={(value) => setUserType(value as "employee" | "admin")}>
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="employee">Employee</TabsTrigger>
               <TabsTrigger value="admin">Admin</TabsTrigger>
             </TabsList>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4">
               {isSignUp ? (
                 <>
@@ -203,7 +215,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
                       required
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Password</label>
                     <InputWithIcon
@@ -220,7 +232,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
                   <div className="p-3 bg-accent/20 rounded-lg">
                     <p className="text-xs text-muted-foreground">
                       Your unique ID will be automatically generated after signup.
-                      {userType === 'admin' ? ' (ADM format)' : ' (EMP format)'}
+                      {userType === "admin" ? " (ADM format)" : " (EMP format)"}
                     </p>
                   </div>
                 </>
@@ -238,7 +250,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
                       required
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <label className="text-sm font-medium text-foreground">Password</label>
@@ -263,7 +275,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
                               value={resetEmail}
                               onChange={(e) => setResetEmail(e.target.value)}
                             />
-                            <Button 
+                            <Button
                               onClick={handleForgotPassword}
                               disabled={isResetting}
                               className="w-full"
@@ -286,34 +298,29 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
                   </div>
                 </>
               )}
-              
-              <EcoButton 
-                type="submit" 
-                className="w-full" 
-                size="lg"
-                disabled={isLoading}
-              >
-                {isLoading 
-                  ? (isSignUp ? "Creating account..." : "Signing in...")
-                  : (isSignUp ? "Sign Up" : "Sign In")
-                }
+
+              <EcoButton type="submit" className="w-full" size="lg" disabled={isLoading}>
+                {isLoading
+                  ? isSignUp
+                    ? "Creating account..."
+                    : "Signing in..."
+                  : isSignUp
+                  ? "Sign Up"
+                  : "Sign In"}
               </EcoButton>
 
               <button
                 type="button"
                 onClick={() => {
                   setIsSignUp(!isSignUp);
-                  setLoginId('');
-                  setPassword('');
-                  setName('');
-                  setEmail('');
+                  setLoginId("");
+                  setPassword("");
+                  setName("");
+                  setEmail("");
                 }}
                 className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                {isSignUp 
-                  ? "Already have an account? Sign in" 
-                  : "Don't have an account? Sign up"
-                }
+                {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
               </button>
             </form>
           </Tabs>
@@ -322,3 +329,4 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
     </div>
   );
 }
+
