@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+
 
 /**
  * Generate next employee ID with proper prefix

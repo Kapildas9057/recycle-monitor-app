@@ -1,5 +1,7 @@
 import React, { useState } from "react";
-import { auth, db } from "@/lib/firebaseClient";
+import { auth, db } from "@/integrations/firebase/client";
+
+
 
 import { UserCheck, Lock, Mail, User, IdCard } from "lucide-react";
 import { InputWithIcon } from "@/components/ui/input-with-icon";
