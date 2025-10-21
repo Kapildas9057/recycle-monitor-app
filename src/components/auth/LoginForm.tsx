@@ -1,7 +1,5 @@
 import React, { useState } from "react";
-import { auth, db } from "@/integrations/firebase/client";
-
-
+import { auth, db } from "../../integrations/firebase/client";
 
 import { UserCheck, Lock, Mail, User, IdCard } from "lucide-react";
 import { InputWithIcon } from "@/components/ui/input-with-icon";
@@ -43,8 +41,8 @@ import {
   getDocs,
 } from "firebase/firestore";
 
-import { db } from "@/lib/firebaseClient";
 import { generateEmployeeId, validateEmployeeId } from "@/utils/authHelpers";
+
 
 interface LoginFormProps {
   onLogin: (user: FirebaseUser, role: string, employeeId: string, name: string) => void;
