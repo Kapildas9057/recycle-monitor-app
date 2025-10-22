@@ -11,7 +11,10 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/sonner";
-import { supabase } from "@/integrations/supabase/firebase.config"; // ✅ Fixed import path
+import { auth, db } from "@/integrations/firebase/client";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+ // ✅ Fixed import path
 import { User as SupabaseUser } from "@supabase/supabase-js";
 import {
   generateEmployeeId,
