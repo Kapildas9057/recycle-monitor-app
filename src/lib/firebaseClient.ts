@@ -1,4 +1,4 @@
-// src/lib/firebaseClient.ts
+// src/integrations/firebase/client.ts
 // Re-export your existing firebase exports so old imports still work.
 // Edit the right-hand import path below to match where your real firebase file is.
 

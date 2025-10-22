@@ -1,4 +1,4 @@
-
+// src/integrations/firebase/client.ts
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
@@ -12,7 +12,6 @@ const firebaseConfig = {
   appId: "1:588164267129:web:59224cf7d7ac06d50568a8",
   measurementId: "G-ZT9EPJ4SXR"
 };
-
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);

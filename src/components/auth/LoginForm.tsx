@@ -1,6 +1,4 @@
 import React, { useState } from "react";
-import { auth, db } from "../../integrations/firebase/client";
-
 import { UserCheck, Lock, Mail, User, IdCard } from "lucide-react";
 import { InputWithIcon } from "@/components/ui/input-with-icon";
 import { EcoButton } from "@/components/ui/eco-button";
@@ -11,8 +9,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/sonner";
+import { supabase } from "@/integrations/supabase/firebase.config"; // ✅ Fixed import path
+import { User as SupabaseUser } from "@supabase/supabase-js";
+import {
+  generateEmployeeId,
+  getEmailByEmployeeId,
+  validateEmployeeId,
+} from "@/utils/authHelpers";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,29 +28,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-import {
-  getAuth,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  sendPasswordResetEmail,
-  User as FirebaseUser,
-} from "firebase/auth";
-
-import {
-  doc,
-  setDoc,
-  getDoc,
-  collection,
-  query,
-  where,
-  getDocs,
-} from "firebase/firestore";
-
-import { generateEmployeeId, validateEmployeeId } from "@/utils/authHelpers";
-
-
 interface LoginFormProps {
-  onLogin: (user: FirebaseUser, role: string, employeeId: string, name: string) => void;
+  onLogin: (
+    user: SupabaseUser,
+    role: string,
+    employeeId: string,
+    name: string
+  ) => void;
 }
 
 export default function LoginForm({ onLogin }: LoginFormProps) {
@@ -60,92 +49,102 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
   const [resetEmail, setResetEmail] = useState("");
   const [isResetting, setIsResetting] = useState(false);
 
-  const auth = getAuth();
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!isSignUp && (!loginId || !password)) {
-      toast.error("Please enter both ID/email and password");
+    if (!loginId || !password) {
+      toast.error("Please enter both ID and password");
       return;
     }
-    if (isSignUp && (!name || !email || !password)) {
-      toast.error("Please fill in all required fields");
+
+    if (isSignUp && (!name || !email)) {
+      toast.error("Please fill in all fields");
       return;
     }
 
     setIsLoading(true);
     try {
       if (isSignUp) {
-        // 🔹 SIGN UP FLOW
         const generatedId = await generateEmployeeId(userType);
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
 
-        // Create user docs in Firestore
-        await setDoc(doc(db, "users", user.uid), {
-          email,
-          employee_id: generatedId,
-          role: userType,
-          email_verified: user.emailVerified,
-          created_at: new Date().toISOString(),
-        });
+        const { data: authData, error: signUpError } =
+          await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              emailRedirectTo: `${window.location.origin}/`,
+              data: {
+                name,
+                employee_id: generatedId,
+              },
+            },
+          });
 
-        await setDoc(doc(db, "user_profiles", user.uid), {
-          user_id: user.uid,
-          name,
-          employee_id: generatedId,
-          created_at: new Date().toISOString(),
-        });
-
-        await setDoc(doc(db, "user_roles", user.uid), {
-          user_id: user.uid,
-          role: userType,
-          created_at: new Date().toISOString(),
-        });
+        if (signUpError) throw signUpError;
+        if (!authData.user) throw new Error("Sign up failed");
 
         toast.success(
-          `Account created! Your ${userType.toUpperCase()} ID is ${generatedId}.`
+          `Account created successfully! Your ID: ${generatedId}. Please save it for login.`
         );
 
-        onLogin(user, userType, generatedId, name);
         setIsSignUp(false);
+        setLoginId("");
+        setPassword("");
         setName("");
         setEmail("");
-        setPassword("");
       } else {
-        // 🔹 SIGN IN FLOW
-        let emailToUse = loginId.trim();
+        let emailToUse = loginId;
 
-        // If employee ID, map to email
         if (validateEmployeeId(loginId)) {
-          const usersRef = collection(db, "users");
-          const q = query(usersRef, where("employee_id", "==", loginId));
-          const querySnapshot = await getDocs(q);
-          if (querySnapshot.empty) {
+          const foundEmail = await getEmailByEmployeeId(loginId);
+          if (!foundEmail) {
             toast.error("Invalid employee ID");
             setIsLoading(false);
             return;
           }
-          emailToUse = querySnapshot.docs[0].data().email;
+          emailToUse = foundEmail;
         }
 
-        const userCredential = await signInWithEmailAndPassword(auth, emailToUse, password);
-        const user = userCredential.user;
+        const { data: authData, error: signInError } =
+          await supabase.auth.signInWithPassword({
+            email: emailToUse,
+            password,
+          });
 
-        // Fetch Firestore user details
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (!userDoc.exists()) throw new Error("User record not found");
+        if (signInError) throw signInError;
+        if (!authData.user) throw new Error("Sign in failed");
 
-        const userData = userDoc.data();
-        const role = userData?.role || "employee";
+        const { data: profile, error: profileError } = await supabase
+          .from("user_profiles")
+          .select("*")
+          .eq("user_id", authData.user.id)
+          .maybeSingle();
 
-        onLogin(user, role, userData.employee_id, userData.email);
-        toast.success(role === "admin" ? "Admin login successful" : "Login successful");
+        if (profileError) throw profileError;
+        if (!profile) throw new Error("User profile not found");
+
+        const { data: roleData, error: roleError } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", authData.user.id)
+          .maybeSingle();
+
+        if (roleError) throw roleError;
+
+        const role = roleData?.role === "admin" ? "admin" : "employee";
+
+        onLogin(authData.user, role, profile.employee_id, profile.name);
+        toast.success(
+          role === "admin" ? "Admin login successful" : "Login successful"
+        );
       }
     } catch (error: any) {
-      console.error(error);
-      toast.error(error.message || "Authentication failed");
+      const message = error?.message || "Authentication failed";
+      toast.error(
+        message.includes("Invalid")
+          ? "Invalid ID or password"
+          : "Authentication failed. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -159,73 +158,210 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
 
     setIsResetting(true);
     try {
-      await sendPasswordResetEmail(auth, resetEmail);
-      toast.success("Password reset link sent!");
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/`,
+      });
+
+      if (error) throw error;
+
+      toast.success("Password reset link sent to your email!");
       setShowForgotPassword(false);
       setResetEmail("");
     } catch (error: any) {
-      toast.error(error.message || "Failed to send reset link");
+      toast.error(error.message || "Failed to send reset email");
     } finally {
       setIsResetting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-accent/20 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-eco border-card-border">
+    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/40 to-accent/30 flex items-center justify-center p-6">
+      <Card className="w-full max-w-md bg-card/90 backdrop-blur-md shadow-2xl border border-border/50 rounded-2xl transition-all duration-300 hover:shadow-3xl">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-gradient-eco rounded-xl flex items-center justify-center">
-            <UserCheck className="w-8 h-8 text-primary-foreground" />
+          <div className="mx-auto w-16 h-16 bg-gradient-to-tr from-primary to-emerald-500 rounded-2xl flex items-center justify-center shadow-md">
+            <UserCheck className="w-8 h-8 text-white" />
           </div>
           <div>
-            <CardTitle className="text-2xl font-display text-foreground">
-              {isSignUp ? "Create Account" : "Welcome to EcoShift"}
+            <CardTitle className="text-3xl font-display text-foreground tracking-tight">
+              {isSignUp ? "Create Your Account" : "Welcome to EcoShift"}
             </CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Professional waste management system
+            <CardDescription className="text-muted-foreground text-sm">
+              Smart & Sustainable Waste Management
             </CardDescription>
           </div>
         </CardHeader>
 
         <CardContent>
-          <Tabs value={userType} onValueChange={(v) => setUserType(v as "employee" | "admin")}>
+          <Tabs
+            value={userType}
+            onValueChange={(v) => setUserType(v as "employee" | "admin")}
+            className="transition-all duration-300"
+          >
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="employee">Employee</TabsTrigger>
               <TabsTrigger value="admin">Admin</TabsTrigger>
             </TabsList>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {isSignUp ? (
-                <>
-                  <InputWithIcon icon={<User />} placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
-                  <InputWithIcon icon={<Mail />} type="email" placeholder="your@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-                  <InputWithIcon icon={<Lock />} type="password" placeholder="Password (min 6 chars)" value={password} onChange={(e) => setPassword(e.target.value)} />
-                </>
-              ) : (
-                <>
-                  <InputWithIcon icon={<IdCard />} placeholder="EMP001 or your@email.com" value={loginId} onChange={(e) => setLoginId(e.target.value)} />
-                  <InputWithIcon icon={<Lock />} type="password" placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} />
-                </>
-              )}
+            <TabsContent value={userType}>
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {isSignUp ? (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-foreground">
+                        Full Name
+                      </label>
+                      <InputWithIcon
+                        icon={<User className="w-4 h-4" />}
+                        placeholder="Enter your full name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                      />
+                    </div>
 
-              <EcoButton type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Processing..." : isSignUp ? "Sign Up" : "Sign In"}
-              </EcoButton>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-foreground">
+                        Email
+                      </label>
+                      <InputWithIcon
+                        icon={<Mail className="w-4 h-4" />}
+                        type="email"
+                        placeholder="your@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setLoginId("");
-                  setPassword("");
-                  setName("");
-                  setEmail("");
-                }}
-                className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
-              </button>
-            </form>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-foreground">
+                        Password
+                      </label>
+                      <InputWithIcon
+                        icon={<Lock className="w-4 h-4" />}
+                        type="password"
+                        placeholder="Enter password (min 6 chars)"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        minLength={6}
+                      />
+                    </div>
+
+                    <div className="p-3 bg-accent/20 rounded-xl text-xs text-muted-foreground">
+                      Your unique ID will be auto-generated after signup —{" "}
+                      {userType === "admin" ? "ADM" : "EMP"} format.
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-foreground">
+                        Employee/Admin ID or Email
+                      </label>
+                      <InputWithIcon
+                        icon={<IdCard className="w-4 h-4" />}
+                        placeholder="EMP001 or your@email.com"
+                        value={loginId}
+                        onChange={(e) => setLoginId(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-semibold text-foreground">
+                          Password
+                        </label>
+                        <Dialog
+                          open={showForgotPassword}
+                          onOpenChange={setShowForgotPassword}
+                        >
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="link"
+                              className="h-auto p-0 text-xs text-primary hover:underline"
+                            >
+                              Forgot password?
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Reset Password</DialogTitle>
+                              <DialogDescription>
+                                Enter your registered email and we’ll send you a
+                                password reset link.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4 pt-4">
+                              <InputWithIcon
+                                icon={<Mail className="w-4 h-4" />}
+                                type="email"
+                                placeholder="your@email.com"
+                                value={resetEmail}
+                                onChange={(e) =>
+                                  setResetEmail(e.target.value)
+                                }
+                              />
+                              <Button
+                                onClick={handleForgotPassword}
+                                disabled={isResetting}
+                                className="w-full"
+                              >
+                                {isResetting
+                                  ? "Sending..."
+                                  : "Send Reset Link"}
+                              </Button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+
+                      <InputWithIcon
+                        icon={<Lock className="w-4 h-4" />}
+                        type="password"
+                        placeholder="Enter your password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        minLength={6}
+                      />
+                    </div>
+                  </>
+                )}
+
+                <EcoButton
+                  type="submit"
+                  className="w-full"
+                  size="lg"
+                  disabled={isLoading}
+                >
+                  {isLoading
+                    ? isSignUp
+                      ? "Creating Account..."
+                      : "Signing In..."
+                    : isSignUp
+                    ? "Sign Up"
+                    : "Sign In"}
+                </EcoButton>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSignUp(!isSignUp);
+                    setLoginId("");
+                    setPassword("");
+                    setName("");
+                    setEmail("");
+                  }}
+                  className="w-full text-sm text-muted-foreground hover:text-foreground transition"
+                >
+                  {isSignUp
+                    ? "Already have an account? Sign in"
+                    : "Don't have an account? Sign up"}
+                </button>
+              </form>
+            </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
