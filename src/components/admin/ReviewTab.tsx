@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Search, Eye, CheckCircle, XCircle, Camera, CameraOff, AlertTriangle, TrendingUp } from "lucide-react";
-import { translateTamilToEnglish } from "@/lib/translateTamil";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { InputWithIcon } from "@/components/ui/input-with-icon";
@@ -28,35 +27,12 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [entryToReject, setEntryToReject] = useState<string | null>(null);
-  const [translatedEntries, setTranslatedEntries] = useState<WasteEntry[]>([]);
-  const [isTranslating, setIsTranslating] = useState(true);
-  
 
-  useEffect(() => {
-    const translateEntries = async () => {
-      setIsTranslating(true);
-      const translated = await Promise.all(
-        wasteEntries.map(async (entry) => ({
-          ...entry,
-          employeeName: await translateTamilToEnglish(entry.employeeName),
-          wasteType: {
-            ...entry.wasteType,
-            name: await translateTamilToEnglish(entry.wasteType.name)
-          }
-        }))
-      );
-      setTranslatedEntries(translated);
-      setIsTranslating(false);
-    };
-
-    translateEntries();
-  }, [wasteEntries]);
-
-  const filteredEntries = translatedEntries.filter(entry => {
+  const filteredEntries = wasteEntries.filter(entry => {
     const matchesSearch = 
       entry.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       entry.employeeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      entry.wasteType.name.toLowerCase().includes(searchTerm.toLowerCase());
+      entry.wasteType.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || entry.status === statusFilter;
     
@@ -100,11 +76,11 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
     }
   };
 
-  const pendingCount = translatedEntries.filter(e => e.status === 'pending').length;
-  const approvedCount = translatedEntries.filter(e => e.status === 'approved').length;
-  const rejectedCount = translatedEntries.filter(e => e.status === 'rejected').length;
-  const totalEntries = translatedEntries.length;
-  const totalWasteCollected = translatedEntries
+  const pendingCount = wasteEntries.filter(e => e.status === 'pending').length;
+  const approvedCount = wasteEntries.filter(e => e.status === 'approved').length;
+  const rejectedCount = wasteEntries.filter(e => e.status === 'rejected').length;
+  const totalEntries = wasteEntries.length;
+  const totalWasteCollected = wasteEntries
     .filter(e => e.status === 'approved')
     .reduce((sum, e) => sum + e.amount, 0);
 
@@ -237,15 +213,7 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isTranslating ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="flex flex-col items-center gap-3">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <p className="text-muted-foreground">Translating entries...</p>
-              </div>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
+          <div className="overflow-x-auto">
               <Table>
               <TableHeader>
                 <TableRow>
@@ -260,35 +228,14 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredEntries.map((entry) => {
-                  const originalEntry = wasteEntries.find(e => e.id === entry.id);
-                  const hasOriginalTamil = originalEntry && (
-                    originalEntry.employeeName !== entry.employeeName ||
-                    originalEntry.wasteType.name !== entry.wasteType.name
-                  );
-                  
-                  return (
+                {filteredEntries.map((entry) => (
                   <TableRow key={entry.id}>
                     <TableCell className="font-medium">
-                      {hasOriginalTamil && originalEntry.employeeName !== entry.employeeName ? (
-                        <span className="cursor-help" title={`Original: ${originalEntry.employeeName}`}>{entry.employeeName}</span>
-                      ) : (
-                        <span>{entry.employeeName}</span>
-                      )}
+                      <span>{entry.employeeName}</span>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{entry.employeeId}</TableCell>
                     <TableCell>
-                      {hasOriginalTamil && originalEntry.wasteType.name !== entry.wasteType.name ? (
-                        <div className="flex items-center gap-2 cursor-help" title={`Original: ${originalEntry.wasteType.name}`}>
-                          <span className="text-lg">{entry.wasteType.icon}</span>
-                          <span>{entry.wasteType.name}</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">{entry.wasteType.icon}</span>
-                          <span>{entry.wasteType.name}</span>
-                        </div>
-                      )}
+                      <span>{entry.wasteType}</span>
                     </TableCell>
                     <TableCell>{entry.amount} kg</TableCell>
                     <TableCell className="text-sm">
@@ -312,7 +259,7 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
                                 <DialogHeader>
                                   <DialogTitle>Photo Verification</DialogTitle>
                                   <DialogDescription>
-                                    Photo submitted by {entry.employeeName} for {entry.wasteType.name}
+                                    Photo submitted by {entry.employeeName} for {entry.wasteType}
                                   </DialogDescription>
                                 </DialogHeader>
                                 <div className="flex justify-center">
@@ -367,12 +314,10 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
                       </div>
                     </TableCell>
                   </TableRow>
-                  );
-                })}
+                ))}
               </TableBody>
             </Table>
           </div>
-          )}
         </CardContent>
       </Card>
 

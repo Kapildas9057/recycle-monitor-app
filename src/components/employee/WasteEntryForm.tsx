@@ -101,7 +101,7 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
       await onSubmit(
         {
           employeeId,
-          wasteType: selectedWasteType,
+          wasteType: selectedWasteType.name,
           amount: parseFloat(amount),
           dateTime: new Date().toISOString(),
           location: location || undefined,

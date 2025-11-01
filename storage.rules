@@ -1,0 +1,26 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper function to check if user is super admin
+    function isSuperAdmin() {
+      return request.auth != null && request.auth.token.email == 'kd850539@gmail.com';
+    }
+    
+    // Waste images storage
+    match /waste_images/{employeeId}/{imageId} {
+      // Employees can upload their own images
+      allow create: if request.auth != null && 
+                       exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.employee_id == employeeId;
+      
+      // Super Admin and Admins can view all images
+      allow read: if isSuperAdmin() || 
+                     exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
+                     get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role in ['admin', 'super_admin'];
+      
+      // Only Super Admin can delete
+      allow delete: if isSuperAdmin();
+    }
+  }
+}

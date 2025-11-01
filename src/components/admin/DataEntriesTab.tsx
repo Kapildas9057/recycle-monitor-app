@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Search, Eye, Download, Camera, CameraOff, Trash2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -6,7 +6,6 @@ import { InputWithIcon } from "@/components/ui/input-with-icon";
 import { EcoButton } from "@/components/ui/eco-button";
 import { Badge } from "@/components/ui/badge";
 import type { WasteEntry } from "@/types";
-import { translateTamilToEnglish } from "@/lib/translateTamil";
 
 interface DataEntriesTabProps {
   wasteEntries: WasteEntry[];
@@ -15,30 +14,12 @@ interface DataEntriesTabProps {
 
 export default function DataEntriesTab({ wasteEntries, onClearAllData }: DataEntriesTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [translatedEntries, setTranslatedEntries] = useState<WasteEntry[]>([]);
 
-  useEffect(() => {
-    const translateEntries = async () => {
-      const translated = await Promise.all(
-        wasteEntries.map(async (entry) => ({
-          ...entry,
-          wasteType: {
-            ...entry.wasteType,
-            name: await translateTamilToEnglish(entry.wasteType.name)
-          }
-        }))
-      );
-      setTranslatedEntries(translated);
-    };
-
-    translateEntries();
-  }, [wasteEntries]);
-
-  const filteredEntries = translatedEntries.filter(
+  const filteredEntries = wasteEntries.filter(
     entry => 
       entry.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       entry.employeeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      entry.wasteType.name.toLowerCase().includes(searchTerm.toLowerCase())
+      entry.wasteType.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getStatusColor = (status: string) => {
@@ -59,7 +40,7 @@ export default function DataEntriesTab({ wasteEntries, onClearAllData }: DataEnt
     const csvData = filteredEntries.map(entry => [
       entry.employeeName,
       entry.employeeId,
-      entry.wasteType.name,
+      entry.wasteType,
       entry.amount,
       formatDate(entry.dateTime),
       entry.status
@@ -147,10 +128,7 @@ export default function DataEntriesTab({ wasteEntries, onClearAllData }: DataEnt
                     <TableCell className="font-medium">{entry.employeeName}</TableCell>
                     <TableCell className="text-muted-foreground">{entry.employeeId}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">{entry.wasteType.icon}</span>
-                        <span>{entry.wasteType.name}</span>
-                      </div>
+                      <span>{entry.wasteType}</span>
                     </TableCell>
                     <TableCell>{entry.amount} kg</TableCell>
                     <TableCell className="text-sm">

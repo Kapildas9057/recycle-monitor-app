@@ -54,7 +54,7 @@ export default function GraphsTab({ wasteEntries }: GraphsTabProps) {
 
   const processDataByWasteType = () => {
     const wasteTypeData = filteredEntries.reduce((acc, entry) => {
-      const type = entry.wasteType.name;
+      const type = entry.wasteType;
       if (!acc[type]) {
         acc[type] = 0;
       }

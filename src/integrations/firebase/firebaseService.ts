@@ -7,7 +7,7 @@ import {
   orderBy,
   DocumentData,
 } from "firebase/firestore";
-import { db } from "./firebaseClient";
+import { db } from "./client";
 
 // Type for your waste entry
 export interface WasteEntry {

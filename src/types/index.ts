@@ -2,16 +2,17 @@ export interface User {
   id: string;
   name: string;
   employeeId?: string;
-  type: 'employee' | 'admin';
+  type: 'employee' | 'admin' | 'super_admin';
 }
 
 export interface WasteEntry {
   id: string;
   employeeId: string;
   employeeName: string;
-  wasteType: WasteType;
+  wasteType: string;
   amount: number;
   dateTime: string;
+  created_at?: string;
   location?: string;
   imageUrl?: string;
   status: 'pending' | 'approved' | 'rejected';

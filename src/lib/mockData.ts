@@ -52,7 +52,7 @@ export const generateMockWasteEntries = (): WasteEntry[] => {
       id: `WE${String(i + 1).padStart(3, '0')}`,
       employeeId: employee.id,
       employeeName: employee.name,
-      wasteType,
+      wasteType: wasteType.name,
       amount: Math.round((Math.random() * 10 + 1) * 10) / 10, // 1-10 kg
       dateTime: date.toISOString(),
       imageUrl: hasPhoto ? `https://picsum.photos/800/600?random=${i}` : undefined,
