@@ -21,6 +21,8 @@ import {
 
 const SuperAdminDashboard = lazy(() => import("@/components/admin/SuperAdminDashboard"));
 
+const SUPER_ADMIN_EMAIL = "kd850539@gmail.com";
+
 interface AppUser {
   id: string;
   name: string;
@@ -37,6 +39,17 @@ export default function EcoShiftApp() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        // Super Admin override based on email
+        if (user.email && user.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
+          setCurrentUser({
+            id: user.uid,
+            name: user.displayName || user.email || "Super Admin",
+            type: 'super_admin',
+          });
+          setIsLoading(false);
+          return;
+        }
+
         // load Firestore user doc
         try {
           const userDoc = await getDocs(query(collection(db, "users"), where("uid", "==", user.uid)));
@@ -76,12 +89,16 @@ export default function EcoShiftApp() {
   useEffect(() => {
     if (!currentUser) return;
 
-    // Scope: admin sees all; employee sees only own entries
+    // Scope: admin & super admin see all; employee sees only own entries
     let q;
-    if (currentUser.type === "admin") {
+    if (currentUser.type === "admin" || currentUser.type === 'super_admin') {
       q = query(collection(db, "waste_entries"), orderBy("created_at", "desc"));
     } else {
-      q = query(collection(db, "waste_entries"), where("employeeId", "==", currentUser.employeeId), orderBy("created_at", "desc"));
+      q = query(
+        collection(db, "waste_entries"),
+        where("employeeId", "==", currentUser.employeeId),
+        orderBy("created_at", "desc")
+      );
     }
 
     const unsub = onSnapshot(q, (snapshot) => {
