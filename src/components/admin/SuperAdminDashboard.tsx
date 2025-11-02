@@ -84,7 +84,11 @@ export default function SuperAdminDashboard({
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <p className="text-sm font-medium text-primary-foreground">{user.name}</p>
-                <p className="text-xs text-primary-foreground/70">Super Administrator</p>
+                <div className="flex items-center gap-2 justify-end">
+                  <span className="text-xs px-2 py-0.5 bg-primary-foreground/20 text-primary-foreground rounded-full border border-primary-foreground/30">
+                    👑 Super Admin
+                  </span>
+                </div>
               </div>
               <Button variant="outline" size="sm" onClick={onLogout} className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/20">
                 <LogOut className="w-4 h-4 mr-2" />
