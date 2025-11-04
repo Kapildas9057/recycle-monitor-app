@@ -197,14 +197,40 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
           return;
         }
 
-        // Fetch user data from Firestore
+        // Fetch user data from Firestore (auto-provision if missing)
         const userDocRef = doc(db, "users", user.uid);
-        const userDocSnap = await getDoc(userDocRef);
+        let userDocSnap = await getDoc(userDocRef);
 
         if (!userDocSnap.exists()) {
-          toast.error("User record not found in database. Please contact support.");
-          setIsLoading(false);
-          return;
+          // Auto-create minimal records for existing Auth users
+          const generatedId = await generateEmployeeId(userType);
+          const createdUserData = {
+            uid: user.uid,
+            email: user.email ?? emailToUse,
+            employee_id: generatedId,
+            role: userType,
+            email_verified: user.emailVerified,
+            created_at: serverTimestamp(),
+          };
+          await setDoc(userDocRef, createdUserData);
+
+          // Also initialize profile and role docs if missing
+          const profileDocRef = doc(db, "user_profiles", user.uid);
+          await setDoc(profileDocRef, {
+            user_id: user.uid,
+            name: user.displayName || (user.email?.split("@")[0] ?? "User"),
+            employee_id: generatedId,
+            created_at: serverTimestamp(),
+          });
+
+          const roleDocRefInit = doc(db, "user_roles", user.uid);
+          await setDoc(roleDocRefInit, {
+            user_id: user.uid,
+            role: userType,
+            created_at: serverTimestamp(),
+          });
+
+          userDocSnap = await getDoc(userDocRef);
         }
 
         const userData = userDocSnap.data();
