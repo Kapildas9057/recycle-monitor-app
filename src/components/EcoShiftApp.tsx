@@ -94,6 +94,12 @@ export default function EcoShiftApp() {
     if (currentUser.type === "admin" || currentUser.type === 'super_admin') {
       q = query(collection(db, "waste_entries"), orderBy("created_at", "desc"));
     } else {
+      // For employees, only query if employeeId exists
+      if (!currentUser.employeeId) {
+        console.warn("Employee has no employeeId, skipping waste entries listener");
+        setWasteEntries([]);
+        return;
+      }
       q = query(
         collection(db, "waste_entries"),
         where("employeeId", "==", currentUser.employeeId),
