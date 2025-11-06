@@ -95,14 +95,15 @@ export default function EcoShiftApp() {
       q = query(collection(db, "waste_entries"), orderBy("created_at", "desc"));
     } else {
       // For employees, only query if employeeId exists
-      if (!currentUser.employeeId) {
+      const eid = (currentUser.employeeId || "").trim();
+      if (!eid) {
         console.warn("Employee has no employeeId, skipping waste entries listener");
         setWasteEntries([]);
         return;
       }
       q = query(
         collection(db, "waste_entries"),
-        where("employeeId", "==", currentUser.employeeId),
+        where("employeeId", "==", eid),
         orderBy("created_at", "desc")
       );
     }
