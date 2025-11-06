@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/hooks/use-toast";
 import type { WasteEntry } from "@/types";
 
 interface ReviewTabProps {

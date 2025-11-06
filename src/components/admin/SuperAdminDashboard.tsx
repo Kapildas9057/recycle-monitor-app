@@ -3,7 +3,7 @@ import { Shield, Users, Trash2, Database, Settings, BarChart3, LogOut } from "lu
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/hooks/use-toast";
 import type { WasteEntry } from "@/types";
 import { db } from "@/integrations/firebase/client";
 import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";

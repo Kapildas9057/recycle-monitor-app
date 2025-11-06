@@ -132,9 +132,18 @@ function dispatch(action: Action) {
   });
 }
 
-type Toast = Omit<ToasterToast, "id">;
+type ToastInput = ToasterToast | string;
 
-function toast({ ...props }: Toast) {
+type ToastOptions = Partial<ToasterToast>;
+
+type ExtendedToast = {
+  (input: ToastInput, opts?: ToastOptions): { id: string; dismiss: () => void; update: (props: ToasterToast) => void };
+  success: (message: string, opts?: ToastOptions) => { id: string; dismiss: () => void; update: (props: ToasterToast) => void };
+  error: (message: string, opts?: ToastOptions) => { id: string; dismiss: () => void; update: (props: ToasterToast) => void };
+  info: (message: string, opts?: ToastOptions) => { id: string; dismiss: () => void; update: (props: ToasterToast) => void };
+};
+
+function baseToast({ ...props }: ToasterToast) {
   const id = genId();
 
   const update = (props: ToasterToast) =>
@@ -156,12 +165,24 @@ function toast({ ...props }: Toast) {
     },
   });
 
-  return {
-    id: id,
-    dismiss,
-    update,
-  };
+  return { id, dismiss, update };
 }
+
+const toast = ((input: ToastInput, opts?: ToastOptions) => {
+  if (typeof input === "string") {
+    return baseToast({ description: input, ...(opts as any) } as ToasterToast);
+  }
+  return baseToast(input as ToasterToast);
+}) as ExtendedToast;
+
+toast.success = (message: string, opts?: ToastOptions) =>
+  baseToast({ description: message, ...(opts as any) } as ToasterToast);
+
+toast.error = (message: string, opts?: ToastOptions) =>
+  baseToast({ description: message, variant: "destructive", ...(opts as any) } as ToasterToast);
+
+toast.info = (message: string, opts?: ToastOptions) =>
+  baseToast({ description: message, ...(opts as any) } as ToasterToast);
 
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState);

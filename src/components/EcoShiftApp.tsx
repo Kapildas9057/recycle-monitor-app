@@ -8,7 +8,7 @@ import { auth, db } from "@/integrations/firebase/client";
 import { getStoredEntries, saveEntry, updateEntryStatus, clearAllEntries } from "@/utils/storage";
 import { calculateSummaryData, calculateLeaderboard } from "@/lib/mockData";
 import type { WasteEntry } from "@/types";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/hooks/use-toast";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import {
   collection,

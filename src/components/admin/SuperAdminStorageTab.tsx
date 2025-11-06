@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Image, Trash2, RefreshCw, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/hooks/use-toast";
 import { storage } from "@/integrations/firebase/client";
 import { ref, listAll, getDownloadURL, deleteObject, getMetadata } from "firebase/storage";
 
