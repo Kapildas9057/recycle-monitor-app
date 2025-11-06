@@ -31,8 +31,13 @@ export default function DataEntriesTab({ wasteEntries, onClearAllData }: DataEnt
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
+  const formatDate = (dateTime: string | { seconds: number; nanoseconds: number } | any) => {
+    // Handle Firebase Timestamp objects
+    if (dateTime && typeof dateTime === 'object' && 'seconds' in dateTime) {
+      return new Date(dateTime.seconds * 1000).toLocaleString();
+    }
+    // Handle string dates
+    return new Date(dateTime).toLocaleString();
   };
 
   const exportToCSV = () => {
