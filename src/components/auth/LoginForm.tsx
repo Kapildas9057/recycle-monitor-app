@@ -15,8 +15,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-// Firebase imports (KEEP ALL - YOUR PERFECT SETUP)
-import { auth, db } from "@/integrations/firebase/client";
+// Firebase imports
+import { auth } from "@/integrations/firebase/client";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -25,6 +25,7 @@ import {
   User as FirebaseUser,
 } from "firebase/auth";
 import {
+  getFirestore,
   doc,
   setDoc,
   getDoc,
@@ -34,6 +35,8 @@ import {
   getDocs,
   serverTimestamp
 } from "firebase/firestore";
+
+const fdb = getFirestore();
 
 interface LoginFormProps {
   onLogin: (user: FirebaseUser, role: string, employeeId: string, name: string) => void;
@@ -56,7 +59,7 @@ const validateEmployeeId = (id: string): boolean => {
 const getEmailByEmployeeId = async (employeeId: string): Promise<string | null> => {
   try {
     if (!employeeId) return null;
-    const usersRef = collection(db, "users");
+    const usersRef = collection(fdb, "users");
     const q = query(usersRef, where("employee_id", "==", employeeId));
     const querySnapshot = await getDocs(q);
 
@@ -125,7 +128,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         await updateProfile(user, { displayName: name });
 
         // 4. Create user document in Firestore (main users collection)
-        await setDoc(doc(db, "users", user.uid), {
+        await setDoc(doc(fdb, "users", user.uid), {
           uid: user.uid,
           email: email,
           employee_id: generatedId,
@@ -135,7 +138,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         });
 
         // 5. Create user profile document
-        await setDoc(doc(db, "user_profiles", user.uid), {
+        await setDoc(doc(fdb, "user_profiles", user.uid), {
           user_id: user.uid,
           name: name,
           employee_id: generatedId,
@@ -143,7 +146,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         });
 
         // 6. Create user role document
-        await setDoc(doc(db, "user_roles", user.uid), {
+        await setDoc(doc(fdb, "user_roles", user.uid), {
           user_id: user.uid,
           role: userType,
           created_at: serverTimestamp(),
@@ -199,7 +202,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         }
 
         // Fetch user data from Firestore (auto-provision if missing)
-        const userDocRef = doc(db, "users", user.uid);
+        const userDocRef = doc(fdb, "users", user.uid);
         let userDocSnap = await getDoc(userDocRef);
 
         if (!userDocSnap.exists()) {
@@ -216,7 +219,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
           await setDoc(userDocRef, createdUserData);
 
           // Also initialize profile and role docs if missing
-          const profileDocRef = doc(db, "user_profiles", user.uid);
+          const profileDocRef = doc(fdb, "user_profiles", user.uid);
           await setDoc(profileDocRef, {
             user_id: user.uid,
             name: user.displayName || (user.email?.split("@")[0] ?? "User"),
@@ -224,7 +227,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
             created_at: serverTimestamp(),
           });
 
-          const roleDocRefInit = doc(db, "user_roles", user.uid);
+          const roleDocRefInit = doc(fdb, "user_roles", user.uid);
           await setDoc(roleDocRefInit, {
             user_id: user.uid,
             role: userType,
@@ -237,13 +240,13 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         const userData = userDocSnap.data();
 
         // Fetch user profile
-        const profileDocRef = doc(db, "user_profiles", user.uid);
+        const profileDocRef = doc(fdb, "user_profiles", user.uid);
         const profileDocSnap = await getDoc(profileDocRef);
 
         const userName = profileDocSnap.exists() ? profileDocSnap.data().name : userData.email;
 
         // Fetch user role
-        const roleDocRef = doc(db, "user_roles", user.uid);
+        const roleDocRef = doc(fdb, "user_roles", user.uid);
         const roleDocSnap = await getDoc(roleDocRef);
 
         const role = roleDocSnap.exists() ? roleDocSnap.data().role : userData.role;

@@ -13,6 +13,8 @@ import { auth } from "@/integrations/firebase/client";
 import { getFirestore, collection, getDocs, deleteDoc, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 
+const fdb = getFirestore();
+
 interface User {
   id: string;
   email: string;

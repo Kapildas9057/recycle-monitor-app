@@ -1,4 +1,5 @@
 import {
+  getFirestore,
   collection,
   addDoc,
   getDocs,
@@ -7,7 +8,8 @@ import {
   orderBy,
   DocumentData,
 } from "firebase/firestore";
-import { db } from "./client";
+
+const fdb = getFirestore();
 
 // Type for your waste entry
 export interface WasteEntry {
@@ -21,7 +23,7 @@ export interface WasteEntry {
 // Add new waste entry
 export async function addWasteEntry(entryData: WasteEntry): Promise<string> {
   try {
-    const docRef = await addDoc(collection(db, "wasteEntries"), entryData);
+    const docRef = await addDoc(collection(fdb, "wasteEntries"), entryData);
     console.log("Waste entry added with ID:", docRef.id);
     return docRef.id;
   } catch (error) {
@@ -33,7 +35,7 @@ export async function addWasteEntry(entryData: WasteEntry): Promise<string> {
 // Get all waste entries
 export async function getAllWasteEntries(): Promise<DocumentData[]> {
   try {
-    const q = query(collection(db, "wasteEntries"), orderBy("dateTime", "desc"));
+    const q = query(collection(fdb, "wasteEntries"), orderBy("dateTime", "desc"));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
@@ -50,7 +52,7 @@ export async function getEmployeeWasteEntries(employeeId: string): Promise<Docum
       return [];
     }
     const q = query(
-      collection(db, "wasteEntries"),
+      collection(fdb, "wasteEntries"),
       where("employeeId", "==", employeeId),
       orderBy("dateTime", "desc")
     );
