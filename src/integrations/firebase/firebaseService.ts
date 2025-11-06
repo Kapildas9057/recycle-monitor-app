@@ -45,6 +45,10 @@ export async function getAllWasteEntries(): Promise<DocumentData[]> {
 // Get entries by employee
 export async function getEmployeeWasteEntries(employeeId: string): Promise<DocumentData[]> {
   try {
+    if (!employeeId) {
+      console.warn("getEmployeeWasteEntries called without employeeId; returning empty list");
+      return [];
+    }
     const q = query(
       collection(db, "wasteEntries"),
       where("employeeId", "==", employeeId),

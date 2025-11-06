@@ -55,6 +55,7 @@ const validateEmployeeId = (id: string): boolean => {
 // Helper: Get email by employee ID from Firestore (KEEP)
 const getEmailByEmployeeId = async (employeeId: string): Promise<string | null> => {
   try {
+    if (!employeeId) return null;
     const usersRef = collection(db, "users");
     const q = query(usersRef, where("employee_id", "==", employeeId));
     const querySnapshot = await getDocs(q);
