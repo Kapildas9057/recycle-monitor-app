@@ -4,13 +4,14 @@ import LoginForm from "@/components/auth/LoginForm";
 import WasteEntryForm from "@/components/employee/WasteEntryForm";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { auth, db } from "@/integrations/firebase/client";
+import { auth } from "@/integrations/firebase/client";
 import { getStoredEntries, saveEntry, updateEntryStatus, clearAllEntries } from "@/utils/storage";
 import { calculateSummaryData, calculateLeaderboard } from "@/lib/mockData";
 import type { WasteEntry } from "@/types";
 import { toast } from "@/hooks/use-toast";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import {
+  getFirestore,
   collection,
   query,
   where,
@@ -19,6 +20,7 @@ import {
   orderBy
 } from "firebase/firestore";
 
+const fdb = getFirestore();
 const SuperAdminDashboard = lazy(() => import("@/components/admin/SuperAdminDashboard"));
 
 const SUPER_ADMIN_EMAIL = "kd850539@gmail.com";
@@ -52,7 +54,7 @@ export default function EcoShiftApp() {
 
         // load Firestore user doc
         try {
-          const userDoc = await getDocs(query(collection(db, "users"), where("uid", "==", user.uid)));
+          const userDoc = await getDocs(query(collection(fdb, "users"), where("uid", "==", user.uid)));
           if (!userDoc.empty) {
             const ud = userDoc.docs[0].data();
             setCurrentUser({
@@ -63,7 +65,7 @@ export default function EcoShiftApp() {
             });
           } else {
             // fallback: try user_profiles
-            const profileSnap = await getDocs(query(collection(db, "user_profiles"), where("user_id", "==", user.uid)));
+            const profileSnap = await getDocs(query(collection(fdb, "user_profiles"), where("user_id", "==", user.uid)));
             const profile = profileSnap.empty ? null : profileSnap.docs[0].data();
             setCurrentUser({
               id: user.uid,
@@ -92,7 +94,7 @@ export default function EcoShiftApp() {
     // Scope: admin & super admin see all; employee sees only own entries
     let q;
     if (currentUser.type === "admin" || currentUser.type === 'super_admin') {
-      q = query(collection(db, "waste_entries"), orderBy("created_at", "desc"));
+      q = query(collection(fdb, "waste_entries"), orderBy("created_at", "desc"));
     } else {
       // For employees, only query if employeeId exists
       const eid = (currentUser.employeeId || "").trim();
@@ -102,7 +104,7 @@ export default function EcoShiftApp() {
         return;
       }
       q = query(
-        collection(db, "waste_entries"),
+        collection(fdb, "waste_entries"),
         where("employeeId", "==", eid),
         orderBy("created_at", "desc")
       );

@@ -5,13 +5,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import type { WasteEntry } from "@/types";
-import { db } from "@/integrations/firebase/client";
-import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
+// using modular getFirestore instance
+import { getFirestore, collection, getDocs, deleteDoc, doc } from "firebase/firestore";
 import SuperAdminUsersTab from "./SuperAdminUsersTab";
 import SuperAdminDataTab from "./SuperAdminDataTab";
 import SuperAdminAnalyticsTab from "./SuperAdminAnalyticsTab";
 import SuperAdminStorageTab from "./SuperAdminStorageTab";
 import SuperAdminSettingsTab from "./SuperAdminSettingsTab";
+
+const fdb = getFirestore();
 
 interface SuperAdminDashboardProps {
   user: {
@@ -52,7 +54,7 @@ export default function SuperAdminDashboard({
 
   const loadStats = async () => {
     try {
-      const usersSnap = await getDocs(collection(db, "users"));
+      const usersSnap = await getDocs(collection(fdb, "users"));
       const users = usersSnap.docs.map(d => d.data());
       
       setStats({

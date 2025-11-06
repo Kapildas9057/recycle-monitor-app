@@ -9,8 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { db, auth } from "@/integrations/firebase/client";
-import { collection, getDocs, deleteDoc, doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { auth } from "@/integrations/firebase/client";
+import { getFirestore, collection, getDocs, deleteDoc, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 
 interface User {
@@ -39,7 +39,7 @@ export default function SuperAdminUsersTab({ onRefresh }: { onRefresh: () => voi
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const usersSnap = await getDocs(collection(db, "users"));
+      const usersSnap = await getDocs(collection(fdb, "users"));
       const usersData = usersSnap.docs.map(d => ({ id: d.id, ...d.data() } as User));
       setUsers(usersData);
       onRefresh();
@@ -74,20 +74,20 @@ export default function SuperAdminUsersTab({ onRefresh }: { onRefresh: () => voi
       );
 
       // Store user data in Firestore
-      await setDoc(doc(db, "users", userCredential.user.uid), {
+      await setDoc(doc(fdb, "users", userCredential.user.uid), {
         email: newUser.email,
         employee_id: employeeId,
         role: newUser.role,
         created_at: serverTimestamp(),
       });
 
-      await setDoc(doc(db, "user_profiles", userCredential.user.uid), {
+      await setDoc(doc(fdb, "user_profiles", userCredential.user.uid), {
         name: newUser.name,
         employee_id: employeeId,
         created_at: serverTimestamp(),
       });
 
-      await setDoc(doc(db, "user_roles", userCredential.user.uid), {
+      await setDoc(doc(fdb, "user_roles", userCredential.user.uid), {
         role: newUser.role,
         created_at: serverTimestamp(),
       });
@@ -106,9 +106,9 @@ export default function SuperAdminUsersTab({ onRefresh }: { onRefresh: () => voi
     if (!confirm(`Are you sure you want to delete user ${email}?`)) return;
 
     try {
-      await deleteDoc(doc(db, "users", userId));
-      await deleteDoc(doc(db, "user_profiles", userId));
-      await deleteDoc(doc(db, "user_roles", userId));
+      await deleteDoc(doc(fdb, "users", userId));
+      await deleteDoc(doc(fdb, "user_profiles", userId));
+      await deleteDoc(doc(fdb, "user_roles", userId));
 
       toast.success("User deleted successfully");
       loadUsers();
