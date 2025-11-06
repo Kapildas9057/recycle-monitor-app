@@ -1,27 +1,40 @@
-import { Toaster as Sonner } from "sonner";
+// Lightweight fallback Toaster and toast to avoid runtime issues with external libs
+// This project primarily uses Firebase; keep notifications minimal and safe.
 
-type ToasterProps = React.ComponentProps<typeof Sonner>;
-
-const Toaster = ({ ...props }: ToasterProps) => {
-  const theme: ToasterProps["theme"] = "system";
-
-  return (
-    <Sonner
-      theme={theme}
-      className="toaster group"
-      toastOptions={{
-        classNames: {
-          toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
-          description: "group-[.toast]:text-muted-foreground",
-          actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
-          cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
-        },
-      }}
-      {...props}
-    />
-  );
+export type ToasterProps = {
+  className?: string;
+  theme?: 'light' | 'dark' | 'system';
+  toastOptions?: Record<string, unknown>;
 };
 
+const Toaster = (_props: ToasterProps) => {
+  // No-op renderer; replace with real implementation if needed
+  return null;
+};
+
+type ToastOptions = { description?: string } & Record<string, unknown>;
+
+type ToastFn = ((message: string, opts?: ToastOptions) => void) & {
+  success: (message: string, opts?: ToastOptions) => void;
+  error: (message: string, opts?: ToastOptions) => void;
+  info: (message: string, opts?: ToastOptions) => void;
+};
+
+const log = (level: string, message: string, opts?: ToastOptions) => {
+  const payload = opts ? ` | ${JSON.stringify(opts)}` : '';
+  const text = `[toast:${level}] ${message}${payload}`;
+  if (level === 'error') console.error(text);
+  else if (level === 'info') console.info(text);
+  else console.log(text);
+};
+
+const toast = ((message: string, opts?: ToastOptions) => log('default', message, opts)) as ToastFn;
+
+toast.success = (message: string, opts?: ToastOptions) => log('success', message, opts);
+
+toast.error = (message: string, opts?: ToastOptions) => log('error', message, opts);
+
+toast.info = (message: string, opts?: ToastOptions) => log('info', message, opts);
+
 export { Toaster };
-export { toast } from "sonner";
+export { toast };
