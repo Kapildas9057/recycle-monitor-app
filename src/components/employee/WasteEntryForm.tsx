@@ -6,6 +6,7 @@ import { InputWithIcon } from "@/components/ui/input-with-icon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { useTamilText } from "@/hooks/useTamilText";
 import type { WasteType, WasteEntry } from "@/types";
 
 const wasteTypes: WasteType[] = [
@@ -21,6 +22,7 @@ interface WasteEntryFormProps {
 }
 
 export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormProps) {
+  const t = useTamilText();
   const [wasteType, setWasteType] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [image, setImage] = useState<File | null>(null);
@@ -56,7 +58,7 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
 
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
-      toast.error("இடம் கிடைக்கவில்லை", { description: "உங்கள் சாதனம் இடம் கண்டறிதலை ஆதரிக்கவில்லை" });
+      toast.error(t("location_error"), { description: t("please_enable_location") });
       return;
     }
 
@@ -66,11 +68,11 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
         const { latitude, longitude } = position.coords;
         setLocation(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
         setIsGettingLocation(false);
-        toast("இடம் கண்டறியப்பட்டது", { description: "உங்கள் தற்போதைய இடம் பதிவு செய்யப்பட்டது" });
+        toast(t("location"), { description: t("getting_location") });
       },
       (error) => {
         setIsGettingLocation(false);
-        toast.error("இடம் கண்டறிதல் பிழை", { description: "உங்கள் இடத்தைப் பெற முடியவில்லை. அனுமதிகளைச் சரிபார்க்கவும்" });
+        toast.error(t("location_error"), { description: t("please_enable_location") });
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
@@ -80,7 +82,7 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
     const file = e.target.files?.[0];
     if (file) {
       setImage(file);
-      toast("புகைப்படம் எடுக்கப்பட்டது", { description: "புகைப்படம் பதிவேற்றத்திற்கு தயார்" });
+      toast(t("upload_image"), { description: t("upload_image") });
     }
   };
 
@@ -88,7 +90,7 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
     e.preventDefault();
     
     if (!wasteType || !amount) {
-      toast.error("தகவல் இல்லை", { description: "தயவுசெய்து அனைத்து தேவையான புலங்களையும் நிரப்பவும்" });
+      toast.error(t("fill_all_fields"), { description: t("fill_all_fields") });
       return;
     }
 
@@ -110,7 +112,7 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
       );
       
       setIsSubmitted(true);
-      toast("கழிவு பதிவு சமர்ப்பிக்கப்பட்டது", { description: "உங்கள் கழிவு பதிவு வெற்றிகரமாக பதிவு செய்யப்பட்டது!" });
+      toast(t("submitted_successfully"), { description: t("entry_saved") });
       
       // Clear cache on successful submission
       localStorage.removeItem(CACHE_KEY);
@@ -125,7 +127,7 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
       }, 3000);
       
     } catch (error) {
-      toast.error("சமர்ப்பிப்பு தோல்வி", { description: "கழிவு பதிவை சமர்ப்பிக்க முடியவில்லை. தயவுசெய்து மீண்டும் முயற்சிக்கவும்." });
+      toast.error(t("failed_to_submit"), { description: t("error_saving") });
     } finally {
       setIsSubmitting(false);
     }
@@ -139,14 +141,14 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
             <div className="mx-auto w-20 h-20 bg-gradient-success rounded-full flex items-center justify-center mb-4">
               <CheckCircle className="w-10 h-10 text-success-foreground" />
             </div>
-            <h2 className="text-2xl font-display font-semibold text-foreground mb-2">
-              சமர்ப்பிப்பு வெற்றிகரம்!
+            <h2 className="text-2xl font-display font-semibold text-foreground mb-2" style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}>
+              {t("submitted_successfully")}
             </h2>
-            <p className="text-muted-foreground mb-4">
-              உங்கள் கழிவு பதிவு பதிவு செய்யப்பட்டு நிர்வாகி மூலம் மதிப்பீடு செய்யப்படும்.
+            <p className="text-muted-foreground mb-4" style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}>
+              {t("entry_saved")}
             </p>
-            <div className="text-sm text-muted-foreground">
-              சில வினாடிகளில் படிவத்திற்கு திருப்பி அனுப்பப்படும்...
+            <div className="text-sm text-muted-foreground" style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}>
+              {t("loading")}
             </div>
           </CardContent>
         </Card>
@@ -159,17 +161,23 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
       <div className="max-w-md mx-auto">
         <Card className="shadow-eco border-card-border">
           <CardHeader>
-            <CardTitle className="text-xl font-display text-foreground">கழிவு பதிவு சமர்ப்பிக்கவும்</CardTitle>
-            <CardDescription>உங்கள் கழிவு சேகரிப்பு தரவைப் பதிவு செய்யவும்</CardDescription>
+            <CardTitle className="text-xl font-display text-foreground" style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}>
+              {t("waste_entry_form")}
+            </CardTitle>
+            <CardDescription style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}>
+              {t("my_waste_logs")}
+            </CardDescription>
           </CardHeader>
           
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="wasteType" className="text-sm font-medium">கழிவு வகை</Label>
+                <Label htmlFor="wasteType" className="text-sm font-medium" style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}>
+                  {t("waste_type")}
+                </Label>
                 <Select value={wasteType} onValueChange={setWasteType} required>
-                  <SelectTrigger className="h-12">
-                    <SelectValue placeholder="கழிவு வகையைத் தேர்ந்தெடுக்கவும்" />
+                  <SelectTrigger className="h-12" style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}>
+                    <SelectValue placeholder={t("select_waste_type")} />
                   </SelectTrigger>
                   <SelectContent>
                     {wasteTypes.map((type) => (
@@ -185,39 +193,48 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="amount" className="text-sm font-medium">எடை (கி.கி)</Label>
+                <Label htmlFor="amount" className="text-sm font-medium" style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}>
+                  {t("amount_kg")}
+                </Label>
                 <InputWithIcon
                   icon={<Weight className="w-4 h-4" />}
                   type="number"
                   step="0.1"
                   min="0"
-                  placeholder="கிலோகிராமில் எடையை உள்ளிடவும்"
+                  placeholder={t("enter_amount")}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   required
+                  style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="datetime" className="text-sm font-medium">தேதி மற்றும் நேரம்</Label>
+                <Label htmlFor="datetime" className="text-sm font-medium" style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}>
+                  {t("date_time")}
+                </Label>
                 <InputWithIcon
                   icon={<Calendar className="w-4 h-4" />}
                   type="datetime-local"
                   value={new Date().toISOString().slice(0, 16)}
                   disabled
+                  style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium">இடம்</Label>
+                <Label className="text-sm font-medium" style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}>
+                  {t("location")}
+                </Label>
                 <div className="flex gap-2">
                   <InputWithIcon
                     icon={<MapPin className="w-4 h-4" />}
                     type="text"
-                    placeholder="இடம் கண்டறியப்படுகிறது..."
+                    placeholder={t("getting_location")}
                     value={location}
                     disabled
                     className="flex-1"
+                    style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}
                   />
                   <EcoButton 
                     variant="outline" 
@@ -232,13 +249,15 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium">புகைப்படம் (விருப்பமானது)</Label>
+                <Label className="text-sm font-medium" style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}>
+                  {t("capture_waste_photo")}
+                </Label>
                 <div className="flex gap-2">
                   <label htmlFor="camera" className="flex-1">
                     <EcoButton variant="outline" size="sm" type="button" className="w-full" asChild>
-                      <div className="cursor-pointer">
+                      <div className="cursor-pointer" style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}>
                         <Camera className="w-4 h-4" />
-                        கேமரா
+                        {t("take_photo")}
                       </div>
                     </EcoButton>
                     <input
@@ -253,9 +272,9 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
                   
                   <label htmlFor="gallery" className="flex-1">
                     <EcoButton variant="outline" size="sm" type="button" className="w-full" asChild>
-                      <div className="cursor-pointer">
+                      <div className="cursor-pointer" style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}>
                         <Upload className="w-4 h-4" />
-                        கேலரி
+                        {t("choose_from_gallery")}
                       </div>
                     </EcoButton>
                     <input
@@ -268,8 +287,8 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
                   </label>
                 </div>
                 {image && (
-                  <p className="text-xs text-success">
-                    ✓ புகைப்படம் தேர்ந்தெடுக்கப்பட்டது: {image.name}
+                  <p className="text-xs text-success" style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}>
+                    ✓ {t("upload_image")}: {image.name}
                   </p>
                 )}
               </div>
@@ -279,8 +298,9 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
                 className="w-full"
                 size="lg"
                 disabled={isSubmitting}
+                style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}
               >
-                {isSubmitting ? "சமர்ப்பிக்கப்படுகிறது..." : "பதிவு சமர்ப்பிக்கவும்"}
+                {isSubmitting ? t("submitting") : t("submit_entry")}
               </EcoButton>
             </form>
           </CardContent>

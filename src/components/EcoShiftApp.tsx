@@ -1,4 +1,3 @@
-// src/components/EcoShiftApp.tsx
 import React, { useState, useEffect, lazy, Suspense } from "react";
 import LoginForm from "@/components/auth/LoginForm";
 import WasteEntryForm from "@/components/employee/WasteEntryForm";
@@ -9,6 +8,7 @@ import { getStoredEntries, saveEntry, updateEntryStatus, clearAllEntries } from 
 import { calculateSummaryData, calculateLeaderboard } from "@/lib/mockData";
 import type { WasteEntry } from "@/types";
 import { toast } from "@/hooks/use-toast";
+import { useTamilText } from "@/hooks/useTamilText";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import {
   getFirestore,
@@ -33,6 +33,7 @@ interface AppUser {
 }
 
 export default function EcoShiftApp() {
+  const t = useTamilText();
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [wasteEntries, setWasteEntries] = useState<WasteEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -196,9 +197,9 @@ export default function EcoShiftApp() {
   if (currentUser.type === 'employee') {
     return (
       <div className="min-h-screen bg-background p-4">
-        <div className="absolute top-4 right-4">
-          <button onClick={handleLogout} className="px-4 py-2 bg-destructive text-destructive-foreground rounded">Logout</button>
-        </div>
+      <div className="absolute top-4 right-4">
+        <button onClick={handleLogout} className="px-4 py-2 bg-destructive text-destructive-foreground rounded" style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}>{t("logout")}</button>
+      </div>
         <WasteEntryForm employeeId={currentUser.employeeId || currentUser.id} onSubmit={handleWasteSubmission} />
       </div>
     );

@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { useTamilText } from "@/hooks/useTamilText";
 
 // Firebase imports
 import { auth } from "@/integrations/firebase/client";
@@ -76,6 +77,7 @@ const getEmailByEmployeeId = async (employeeId: string): Promise<string | null> 
 };
 
 export default function LoginForm({ onLogin }: LoginFormProps) {
+  const t = useTamilText();
   const [userType, setUserType] = useState<"employee" | "admin">("employee");
   const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
@@ -95,17 +97,20 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
 
     // Validation (KEEP YOUR PERFECT LOGIC)
     if (!isSignUp && (!loginId || !password)) {
-      toast.error("Please enter both ID/email and password");
+      const msg = userType === "employee" ? t("please_enter_id_password") : "Please enter both ID/email and password";
+      toast.error(msg);
       return;
     }
 
     if (isSignUp && (!name || !email || !password)) {
-      toast.error("Please fill in all required fields");
+      const msg = userType === "employee" ? t("please_fill_required") : "Please fill in all required fields";
+      toast.error(msg);
       return;
     }
 
     if (isSignUp && password.length < 6) {
-      toast.error("Password must be at least 6 characters");
+      const msg = userType === "employee" ? t("password_min_6") : "Password must be at least 6 characters";
+      toast.error(msg);
       return;
     }
 
@@ -152,9 +157,11 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
           created_at: serverTimestamp(),
         });
 
-        toast.success(
-          `Account created successfully! Your ${userType.toUpperCase()} ID is: ${generatedId}. Save it for login.`
-        );
+        const successMsg = userType === "employee" 
+          ? `${t("account_created")} ${generatedId}. ${t("save_for_login")}`
+          : `Account created successfully! Your ${userType.toUpperCase()} ID is: ${generatedId}. Save it for login.`;
+        
+        toast.success(successMsg);
 
         // Auto-login after signup
         onLogin(user, userType, generatedId, name);
@@ -177,7 +184,10 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         if (validateEmployeeId(loginId.trim())) {
           const foundEmail = await getEmailByEmployeeId(loginId.trim());
           if (!foundEmail) {
-            toast.error("Invalid employee/admin ID. Please check and try again.");
+            const errorMsg = userType === "employee" 
+              ? t("invalid_employee_id")
+              : "Invalid employee/admin ID. Please check and try again.";
+            toast.error(errorMsg);
             setIsLoading(false);
             return;
           }
@@ -264,27 +274,28 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         // Call onLogin callback
         onLogin(user, role, employeeId, userName);
 
-        toast.success(role === "admin" ? "Admin login successful" : "Login successful");
+        const loginSuccessMsg = role === "admin" ? "Admin login successful" : (userType === "employee" ? t("login_successful") : "Login successful");
+        toast.success(loginSuccessMsg);
       }
 
     } catch (error: any) {
       console.error("Authentication error:", error);
 
       // Handle specific Firebase errors (KEEP YOUR PERFECT HANDLING)
-      let errorMessage = "Authentication failed";
+      let errorMessage = userType === "employee" ? t("authentication_failed") : "Authentication failed";
 
       if (error.code === "auth/email-already-in-use") {
-        errorMessage = "This email is already registered. Please sign in instead.";
+        errorMessage = userType === "employee" ? t("email_already_registered") : "This email is already registered. Please sign in instead.";
       } else if (error.code === "auth/invalid-email") {
-        errorMessage = "Invalid email format";
+        errorMessage = userType === "employee" ? t("invalid_email") : "Invalid email format";
       } else if (error.code === "auth/user-not-found") {
-        errorMessage = "No account found with this email/ID";
+        errorMessage = userType === "employee" ? t("no_account_found") : "No account found with this email/ID";
       } else if (error.code === "auth/wrong-password") {
-        errorMessage = "Incorrect password";
+        errorMessage = userType === "employee" ? t("incorrect_password") : "Incorrect password";
       } else if (error.code === "auth/invalid-credential") {
-        errorMessage = "Invalid email/ID or password";
+        errorMessage = userType === "employee" ? t("invalid_email_or_password") : "Invalid email/ID or password";
       } else if (error.code === "auth/weak-password") {
-        errorMessage = "Password should be at least 6 characters";
+        errorMessage = userType === "employee" ? t("weak_password") : "Password should be at least 6 characters";
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -298,24 +309,26 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
 
   const handleForgotPassword = async () => {
     if (!resetEmail || !resetEmail.includes("@")) {
-      toast.error("Please enter a valid email address");
+      const msg = userType === "employee" ? t("enter_valid_email") : "Please enter a valid email address";
+      toast.error(msg);
       return;
     }
 
     setIsResetting(true);
     try {
       await sendPasswordResetEmail(auth, resetEmail);
-      toast.success("Password reset link sent to your email! Please check your inbox.");
+      const successMsg = userType === "employee" ? t("reset_link_sent") : "Password reset link sent to your email! Please check your inbox.";
+      toast.success(successMsg);
       setShowForgotPassword(false);
       setResetEmail("");
     } catch (error: any) {
       console.error("Password reset error:", error);
 
-      let errorMessage = "Failed to send reset email";
+      let errorMessage = userType === "employee" ? t("failed_to_send_reset") : "Failed to send reset email";
       if (error.code === "auth/user-not-found") {
-        errorMessage = "No account found with this email";
+        errorMessage = userType === "employee" ? t("no_account_found") : "No account found with this email";
       } else if (error.code === "auth/invalid-email") {
-        errorMessage = "Invalid email address";
+        errorMessage = userType === "employee" ? t("invalid_email") : "Invalid email address";
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -335,11 +348,13 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
             <UserCheck className="w-8 h-8 text-primary-foreground" />
           </div>
           <div>
-            <CardTitle className="text-2xl font-display text-foreground">
-              {isSignUp ? "Create Account" : "Welcome to EcoShift"}
+            <CardTitle className="text-2xl font-display text-foreground" style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}>
+              {isSignUp 
+                ? (userType === "employee" ? t("create_account") : "Create Account")
+                : (userType === "employee" ? t("welcome_ecoshift") : "Welcome to EcoShift")}
             </CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Professional waste management system
+            <CardDescription className="text-muted-foreground" style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}>
+              {userType === "employee" ? t("professional_waste_system") : "Professional waste management system"}
             </CardDescription>
           </div>
         </CardHeader>
@@ -347,7 +362,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         <CardContent>
           <Tabs value={userType} onValueChange={(value) => setUserType(value as "employee" | "admin")}>
             <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="employee">Employee</TabsTrigger>
+              <TabsTrigger value="employee" style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}>{t("employee")}</TabsTrigger>
               <TabsTrigger value="admin">Admin</TabsTrigger>
             </TabsList>
 
@@ -355,93 +370,112 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
               {isSignUp ? (
                 <>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Full Name</label>
+                    <label className="text-sm font-medium text-foreground" style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}>
+                      {userType === "employee" ? t("full_name") : "Full Name"}
+                    </label>
                     <InputWithIcon
                       icon={<User className="w-4 h-4" />}
-                      placeholder="Enter your full name"
+                      placeholder={userType === "employee" ? t("enter_full_name") : "Enter your full name"}
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       required
+                      style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Email</label>
+                    <label className="text-sm font-medium text-foreground" style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}>
+                      {userType === "employee" ? t("email") : "Email"}
+                    </label>
                     <InputWithIcon
                       icon={<Mail className="w-4 h-4" />}
                       type="email"
-                      placeholder="your@email.com"
+                      placeholder={userType === "employee" ? t("your_email") : "your@email.com"}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Password</label>
+                    <label className="text-sm font-medium text-foreground" style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}>
+                      {userType === "employee" ? t("password") : "Password"}
+                    </label>
                     <InputWithIcon
                       icon={<Lock className="w-4 h-4" />}
                       type="password"
-                      placeholder="Enter your password (min 6 characters)"
+                      placeholder={userType === "employee" ? `${t("enter_password")} (${t("min_6_chars")})` : "Enter your password (min 6 characters)"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       minLength={6}
+                      style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}
                     />
                   </div>
 
                   <div className="p-3 bg-accent/20 rounded-lg">
-                    <p className="text-xs text-muted-foreground">
-                      Your unique ID will be automatically generated after signup.
-                      {userType === "admin" ? " (ADM-XXXXXX-XXX format)" : " (EMP-XXXXXX-XXX format)"}
+                    <p className="text-xs text-muted-foreground" style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}>
+                      {userType === "employee" 
+                        ? `${t("id_auto_generated")} ${t("emp_format")}`
+                        : `Your unique ID will be automatically generated after signup.${userType === "admin" ? " (ADM-XXXXXX-XXX format)" : " (EMP-XXXXXX-XXX format)"}`}
                     </p>
                   </div>
                 </>
               ) : (
                 <>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">
-                      {userType === "admin" ? "Admin ID or Email" : "Employee ID or Email"}
+                    <label className="text-sm font-medium text-foreground" style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}>
+                      {userType === "admin" ? "Admin ID or Email" : t("employee_id_or_email")}
                     </label>
                     <InputWithIcon
                       icon={<IdCard className="w-4 h-4" />}
-                      placeholder={userType === "admin" ? "ADM-123456-789 or admin@email.com" : "EMP-123456-789 or your@email.com"}
+                      placeholder={userType === "admin" ? "ADM-123456-789 or admin@email.com" : t("emp_id_placeholder")}
                       value={loginId}
                       onChange={(e) => setLoginId(e.target.value)}
                       required
+                      style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}
                     />
                   </div>
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium text-foreground">Password</label>
+                      <label className="text-sm font-medium text-foreground" style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}>
+                        {userType === "employee" ? t("password") : "Password"}
+                      </label>
                       <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
                         <DialogTrigger asChild>
-                          <Button variant="link" className="h-auto p-0 text-xs">
-                            Forgot password?
+                          <Button variant="link" className="h-auto p-0 text-xs" style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}>
+                            {userType === "employee" ? t("forgot_password") : "Forgot password?"}
                           </Button>
                         </DialogTrigger>
                         <DialogContent>
                           <DialogHeader>
-                            <DialogTitle>Reset Password</DialogTitle>
-                            <DialogDescription>
-                              Enter your email address and we'll send you a password reset link.
+                            <DialogTitle style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}>
+                              {userType === "employee" ? t("reset_password") : "Reset Password"}
+                            </DialogTitle>
+                            <DialogDescription style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}>
+                              {userType === "employee" ? t("reset_description") : "Enter your email address and we'll send you a password reset link."}
                             </DialogDescription>
                           </DialogHeader>
                           <div className="space-y-4 pt-4">
                             <InputWithIcon
                               icon={<Mail className="w-4 h-4" />}
                               type="email"
-                              placeholder="your@email.com"
+                              placeholder={userType === "employee" ? t("your_email") : "your@email.com"}
                               value={resetEmail}
                               onChange={(e) => setResetEmail(e.target.value)}
+                              style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}
                             />
                             <Button
                               onClick={handleForgotPassword}
                               disabled={isResetting}
                               className="w-full"
+                              style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}
                             >
-                              {isResetting ? "Sending..." : "Send Reset Link"}
+                              {isResetting 
+                                ? (userType === "employee" ? t("sending") : "Sending...") 
+                                : (userType === "employee" ? t("send_reset_link") : "Send Reset Link")}
                             </Button>
                           </div>
                         </DialogContent>
@@ -450,24 +484,25 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
                     <InputWithIcon
                       icon={<Lock className="w-4 h-4" />}
                       type="password"
-                      placeholder="Enter your password"
+                      placeholder={userType === "employee" ? t("enter_password") : "Enter your password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       minLength={6}
+                      style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}
                     />
                   </div>
                 </>
               )}
 
-              <EcoButton type="submit" className="w-full" size="lg" disabled={isLoading}>
+              <EcoButton type="submit" className="w-full" size="lg" disabled={isLoading} style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}>
                 {isLoading
                   ? isSignUp
-                    ? "Creating account..."
-                    : "Signing in..."
+                    ? (userType === "employee" ? t("creating_account") : "Creating account...")
+                    : (userType === "employee" ? t("signing_in") : "Signing in...")
                   : isSignUp
-                  ? "Sign Up"
-                  : "Sign In"}
+                  ? (userType === "employee" ? t("sign_up") : "Sign Up")
+                  : (userType === "employee" ? t("sign_in") : "Sign In")}
               </EcoButton>
 
               <button
@@ -479,9 +514,22 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
                   setName("");
                   setEmail("");
                 }}
-                className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+                style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}
               >
-                {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
+                {isSignUp ? (
+                  userType === "employee" ? (
+                    <>{t("already_have_account")} <span className="text-primary font-medium">{t("sign_in")}</span></>
+                  ) : (
+                    <>Already have an account? <span className="text-primary font-medium">Sign In</span></>
+                  )
+                ) : (
+                  userType === "employee" ? (
+                    <>{t("no_account")} <span className="text-primary font-medium">{t("sign_up")}</span></>
+                  ) : (
+                    <>Don&apos;t have an account? <span className="text-primary font-medium">Sign Up</span></>
+                  )
+                )}
               </button>
             </form>
           </Tabs>
