@@ -105,7 +105,7 @@ export default function EcoShiftApp() {
       }
       q = query(
         collection(fdb, "waste_entries"),
-        where("employeeId", "==", eid),
+        where("employee_id", "==", eid),
         orderBy("created_at", "desc")
       );
     }
