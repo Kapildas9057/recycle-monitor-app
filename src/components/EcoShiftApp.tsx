@@ -7,7 +7,7 @@ import { auth } from "@/integrations/firebase/client";
 import { getStoredEntries, saveEntry, updateEntryStatus, clearAllEntries } from "@/utils/storage";
 import { calculateSummaryData, calculateLeaderboard } from "@/lib/mockData";
 import type { WasteEntry } from "@/types";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import { useTamilText } from "@/hooks/useTamilText";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import {
@@ -55,27 +55,34 @@ export default function EcoShiftApp() {
 
         // load Firestore user doc
         try {
-          const userDoc = await getDocs(query(collection(fdb, "users"), where("uid", "==", user.uid)));
-          if (!userDoc.empty) {
-            const ud = userDoc.docs[0].data();
+          // First try to get user profile by user_id
+          const profileSnap = await getDocs(query(collection(fdb, "user_profiles"), where("user_id", "==", user.uid)));
+          
+          if (!profileSnap.empty) {
+            const profile = profileSnap.docs[0].data();
+            
+            // Get role from user_roles
+            const roleSnap = await getDocs(query(collection(fdb, "user_roles"), where("user_id", "==", user.uid)));
+            const role = roleSnap.empty ? "employee" : roleSnap.docs[0].data().role;
+            
             setCurrentUser({
               id: user.uid,
-              name: ud.name || ud.email || "No name",
-              type: ud.role === "admin" ? "admin" : "employee",
-              employeeId: ud.employee_id
+              name: profile.name || user.email || "Unknown",
+              type: role === "admin" ? "admin" : "employee",
+              employeeId: profile.employee_id
             });
           } else {
-            // fallback: try user_profiles
-            const profileSnap = await getDocs(query(collection(fdb, "user_profiles"), where("user_id", "==", user.uid)));
-            const profile = profileSnap.empty ? null : profileSnap.docs[0].data();
+            // No profile found - create a minimal session
+            console.warn("No profile found for user, using minimal session");
             setCurrentUser({
               id: user.uid,
-              name: profile?.name || user.email || "Unknown",
+              name: user.displayName || user.email || "Unknown",
               type: "employee",
-              employeeId: profile?.employee_id
+              employeeId: undefined
             });
           }
         } catch (err) {
+          console.error("Profile load error:", err);
           toast.error("Failed to load profile");
           setCurrentUser(null);
         }
@@ -116,7 +123,7 @@ export default function EcoShiftApp() {
       setWasteEntries(items);
     }, (err) => {
       console.error("Realtime listener error", err);
-      toast.error("Failed to listen for updates.");
+      toast.error("Failed to listen for updates");
     });
 
     return () => unsub();
