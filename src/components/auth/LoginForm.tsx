@@ -1,3 +1,4 @@
+// src/components/auth/LoginForm.tsx
 import React, { useState } from "react";
 import { UserCheck, Lock, Mail, User, IdCard } from "lucide-react";
 import { InputWithIcon } from "@/components/ui/input-with-icon";
@@ -12,13 +13,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  sendPasswordResetEmail,
-  updateProfile,
-  User as FirebaseUser,
-} from "firebase/auth";
+
 import {
   doc,
   setDoc,
@@ -30,13 +25,11 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 
-import { auth, db } from "@/integrations/firebase/client";
-
 interface LoginFormProps {
-  onLogin: (user: FirebaseUser, role: string, employeeId: string, name: string) => void;
+  onLogin: (user: any, role: string, employeeId: string, name: string) => void;
 }
 
-// Helper: Generate employee ID
+// Helper: Generate employee ID (frontend fallback; backend also generates)
 const generateEmployeeId = async (role: "employee" | "admin"): Promise<string> => {
   const prefix = role === "admin" ? "ADM" : "EMP";
   const timestamp = Date.now().toString().slice(-6);
@@ -47,25 +40,6 @@ const generateEmployeeId = async (role: "employee" | "admin"): Promise<string> =
 // Helper: Validate employee ID format
 const validateEmployeeId = (id: string): boolean => {
   return /^(EMP|ADM)-\d{6}-\d{3}$/.test(id.trim());
-};
-
-// Helper: Get email by employee ID from Firestore
-const getEmailByEmployeeId = async (employeeId: string): Promise<string | null> => {
-  try {
-    const usersRef = collection(db, "users");
-    const q = query(usersRef, where("employee_id", "==", employeeId));
-    const querySnapshot = await getDocs(q);
-
-    if (querySnapshot.empty) {
-      return null;
-    }
-
-    const userDoc = querySnapshot.docs[0];
-    return (userDoc.data() as any).email || null;
-  } catch (error) {
-    console.error("Error fetching email by employee ID:", error);
-    return null;
-  }
 };
 
 export default function LoginForm({ onLogin }: LoginFormProps) {
@@ -79,6 +53,8 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [isResetting, setIsResetting] = useState(false);
+
+  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,42 +76,22 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
     setIsLoading(true);
     try {
       if (isSignUp) {
-        // Sign-up flow
-        const generatedId = await generateEmployeeId(userType);
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        // update displayName
-        try {
-          await updateProfile(user, { displayName: name });
-        } catch (err) {
-          console.warn("updateProfile failed:", err);
+        // Sign-up flow via backend
+        const payload = { email, password, name, role: userType };
+        const resp = await fetch(`${API_BASE}/signup`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err?.error || "Signup failed");
         }
-
-        // write Firestore documents
-        await setDoc(doc(db, "users", user.uid), {
-          uid: user.uid,
-          email,
-          employee_id: generatedId,
-          role: userType,
-          email_verified: user.emailVerified,
-          created_at: serverTimestamp(),
-        });
-
-        await setDoc(doc(db, "user_profiles", user.uid), {
-          user_id: user.uid,
-          name,
-          employee_id: generatedId,
-          created_at: serverTimestamp(),
-        });
-
-        await setDoc(doc(db, "user_roles", user.uid), {
-          user_id: user.uid,
-          role: userType,
-          created_at: serverTimestamp(),
-        });
+        const data = await resp.json();
+        const generatedId = data.employee_id || (await generateEmployeeId(userType));
 
         toast.success(`Account created! Your ${userType.toUpperCase()} ID is ${generatedId}.`);
+        const user = { email, name, employee_id: generatedId };
         onLogin(user, userType, generatedId, name);
 
         setIsSignUp(false);
@@ -144,33 +100,35 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         setPassword("");
         setLoginId("");
       } else {
-        // Sign-in flow
-        let emailToUse = loginId.trim();
-
+        // Sign-in flow via backend
+        let payload: any = {};
         if (validateEmployeeId(loginId)) {
-          const foundEmail = await getEmailByEmployeeId(loginId);
-          if (!foundEmail) {
-            toast.error("Invalid employee ID");
-            setIsLoading(false);
-            return;
-          }
-          emailToUse = foundEmail;
+          payload.employee_id = loginId.trim();
+        } else if (loginId.includes("@")) {
+          // treat as email
+          payload.email = loginId.trim();
+        } else {
+          // default to employee_id if format unknown
+          payload.employee_id = loginId.trim();
         }
+        payload.password = password;
 
-        const userCredential = await signInWithEmailAndPassword(auth, emailToUse, password);
-        const user = userCredential.user;
+        const resp = await fetch(`${API_BASE}/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err?.error || "Login failed");
+        }
+        const body = await resp.json();
+        const user = body.user || {};
+        const role = body.role || user.role || "employee";
+        const employeeId = user.employee_id || payload.employee_id || "";
+        const nameFromServer = user.name || "";
 
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (!userDoc.exists()) throw new Error("User record not found");
-
-        const userData = userDoc.data() as any;
-        const role = userData?.role || "employee";
-
-        // fetch profile
-        const profileDoc = await getDoc(doc(db, "user_profiles", user.uid));
-        const nameFromProfile = profileDoc.exists() ? (profileDoc.data() as any).name : "";
-
-        onLogin(user, role, userData.employee_id, nameFromProfile || user.email || "");
+        onLogin(user, role, employeeId, nameFromServer || user.email || "");
         toast.success(role === "admin" ? "Admin login successful" : "Login successful");
       }
     } catch (error: any) {
@@ -188,12 +146,23 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
     }
     setIsResetting(true);
     try {
-      await sendPasswordResetEmail(auth, resetEmail);
-      toast.success("Password reset link sent!");
-      setShowForgotPassword(false);
-      setResetEmail("");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to send reset link");
+      // Try calling backend reset endpoint if available
+      const resp = await fetch(`${API_BASE}/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: resetEmail }),
+      });
+      if (!resp.ok) {
+        // if endpoint not implemented, show fallback message
+        toast.error("Password reset not available from client. Contact admin.");
+      } else {
+        toast.success("Password reset link sent!");
+        setShowForgotPassword(false);
+        setResetEmail("");
+      }
+    } catch (err) {
+      console.warn(err);
+      toast.error("Password reset not available. Contact admin.");
     } finally {
       setIsResetting(false);
     }
@@ -258,6 +227,24 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
           </Tabs>
         </CardContent>
       </Card>
+
+      {showForgotPassword && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded p-6 w-full max-w-md">
+            <h3 className="text-lg font-medium">Reset password</h3>
+            <p className="text-sm text-muted-foreground">Enter your email to receive a reset link</p>
+            <div className="mt-4 space-y-2">
+              <InputWithIcon icon={<Mail />} placeholder="your@email.com" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} />
+              <div className="flex space-x-2">
+                <button className="btn" onClick={() => setShowForgotPassword(false)}>Cancel</button>
+                <EcoButton className="ml-auto" disabled={isResetting} onClick={handleForgotPassword}>
+                  {isResetting ? "Sending..." : "Send link"}
+                </EcoButton>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
