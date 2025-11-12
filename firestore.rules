@@ -21,25 +21,30 @@ service cloud.firestore {
         get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role == 'employee';
     }
     
-    // Users collection
+    // Approval requests - only super admin can manage
+    match /approval_requests/{requestId} {
+      allow read, write: if isSuperAdmin();
+      allow create: if request.auth != null; // Allow users to create their own approval request
+    }
+    
+    // Users collection - deprecated, keeping for backward compatibility
     match /users/{userId} {
       allow read: if isSuperAdmin() || isAdmin() || request.auth.uid == userId;
       allow write: if isSuperAdmin();
-      allow create: if request.auth != null; // Allow user creation during signup
     }
     
     // User profiles
     match /user_profiles/{userId} {
       allow read: if isSuperAdmin() || isAdmin() || request.auth.uid == userId;
-      allow write: if isSuperAdmin() || request.auth.uid == userId;
-      allow create: if request.auth != null;
+      allow write: if isSuperAdmin();
+      allow create: if isSuperAdmin(); // Only super admin can create profiles (during approval)
     }
     
     // User roles
     match /user_roles/{userId} {
       allow read: if isSuperAdmin() || isAdmin() || request.auth.uid == userId;
       allow write: if isSuperAdmin();
-      allow create: if request.auth != null;
+      allow create: if isSuperAdmin(); // Only super admin can assign roles (during approval)
     }
     
     // Waste entries

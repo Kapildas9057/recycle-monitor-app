@@ -119,7 +119,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
     try {
       if (isSignUp) {
         // ============================================
-        // SIGN UP FLOW (KEEP YOUR PERFECT FIREBASE)
+        // SIGN UP FLOW - WITH APPROVAL WORKFLOW
         // ============================================
 
         // 1. Generate unique employee ID
@@ -132,39 +132,25 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         // 3. Update display name
         await updateProfile(user, { displayName: name });
 
-        // 4. Create user document in Firestore (main users collection)
-        await setDoc(doc(fdb, "users", user.uid), {
+        // 4. Create approval request (status: pending)
+        await setDoc(doc(fdb, "approval_requests", user.uid), {
           uid: user.uid,
           email: email,
-          employee_id: generatedId,
-          role: userType,
-          email_verified: user.emailVerified,
-          created_at: serverTimestamp(),
-        });
-
-        // 5. Create user profile document
-        await setDoc(doc(fdb, "user_profiles", user.uid), {
-          user_id: user.uid,
           name: name,
           employee_id: generatedId,
-          created_at: serverTimestamp(),
-        });
-
-        // 6. Create user role document
-        await setDoc(doc(fdb, "user_roles", user.uid), {
-          user_id: user.uid,
           role: userType,
+          status: "pending",
           created_at: serverTimestamp(),
         });
 
         const successMsg = userType === "employee" 
-          ? `${t("account_created")} ${generatedId}. ${t("save_for_login")}`
-          : `Account created successfully! Your ${userType.toUpperCase()} ID is: ${generatedId}. Save it for login.`;
+          ? `${t("account_created")} ${generatedId}. ${t("approval_pending")}`
+          : `Account created successfully! Your ${userType.toUpperCase()} ID is: ${generatedId}. Awaiting Super Admin approval.`;
         
         toast.success(successMsg);
 
-        // Auto-login after signup
-        onLogin(user, userType, generatedId, name);
+        // Sign out immediately - user must wait for approval
+        await auth.signOut();
 
         // Reset form
         setIsSignUp(false);
@@ -204,62 +190,66 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
 
         // 🔐 CHECK FOR SUPER ADMIN (HIDDEN ROLE)
         if (user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
-          // Super Admin detected - bypass role checking
+          // Super Admin detected - bypass all checks
           onLogin(user, "super_admin", "SUPER-ADMIN", "Super Admin");
           toast.success("🔐 Super Admin Access Granted");
           setIsLoading(false);
           return;
         }
 
-        // Fetch user data from Firestore (auto-provision if missing)
-        const userDocRef = doc(fdb, "users", user.uid);
-        let userDocSnap = await getDoc(userDocRef);
+        // Check approval status
+        const approvalDocRef = doc(fdb, "approval_requests", user.uid);
+        const approvalDocSnap = await getDoc(approvalDocRef);
 
-        if (!userDocSnap.exists()) {
-          // Auto-create minimal records for existing Auth users
-          const generatedId = await generateEmployeeId(userType);
-          const createdUserData = {
-            uid: user.uid,
-            email: user.email ?? emailToUse,
-            employee_id: generatedId,
-            role: userType,
-            email_verified: user.emailVerified,
-            created_at: serverTimestamp(),
-          };
-          await setDoc(userDocRef, createdUserData);
-
-          // Also initialize profile and role docs if missing
-          const profileDocRef = doc(fdb, "user_profiles", user.uid);
-          await setDoc(profileDocRef, {
-            user_id: user.uid,
-            name: user.displayName || (user.email?.split("@")[0] ?? "User"),
-            employee_id: generatedId,
-            created_at: serverTimestamp(),
-          });
-
-          const roleDocRefInit = doc(fdb, "user_roles", user.uid);
-          await setDoc(roleDocRefInit, {
-            user_id: user.uid,
-            role: userType,
-            created_at: serverTimestamp(),
-          });
-
-          userDocSnap = await getDoc(userDocRef);
+        if (!approvalDocSnap.exists()) {
+          toast.error("Account not found. Please sign up first.");
+          await auth.signOut();
+          setIsLoading(false);
+          return;
         }
 
-        const userData = userDocSnap.data();
+        const approvalData = approvalDocSnap.data();
 
-        // Fetch user profile
+        if (approvalData.status === "pending") {
+          toast.error("Your account is awaiting Super Admin approval. Please check back later.");
+          await auth.signOut();
+          setIsLoading(false);
+          return;
+        }
+
+        if (approvalData.status === "rejected") {
+          toast.error("Your account was rejected. Please contact the administrator.");
+          await auth.signOut();
+          setIsLoading(false);
+          return;
+        }
+
+        // User is approved - fetch profile data
         const profileDocRef = doc(fdb, "user_profiles", user.uid);
         const profileDocSnap = await getDoc(profileDocRef);
 
-        const userName = profileDocSnap.exists() ? profileDocSnap.data().name : userData.email;
+        if (!profileDocSnap.exists()) {
+          toast.error("Profile not found. Please contact Super Admin.");
+          await auth.signOut();
+          setIsLoading(false);
+          return;
+        }
+
+        const profileData = profileDocSnap.data();
+        const userName = profileData.name || user.displayName || user.email?.split("@")[0] || "User";
 
         // Fetch user role
         const roleDocRef = doc(fdb, "user_roles", user.uid);
         const roleDocSnap = await getDoc(roleDocRef);
 
-        const role = roleDocSnap.exists() ? roleDocSnap.data().role : userData.role;
+        if (!roleDocSnap.exists()) {
+          toast.error("Role not found. Please contact Super Admin.");
+          await auth.signOut();
+          setIsLoading(false);
+          return;
+        }
+
+        const role = roleDocSnap.data().role;
 
         // Ensure role matches selected user type
         if (role !== userType) {
@@ -269,7 +259,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
           return;
         }
 
-        const employeeId = userData.employee_id || "N/A";
+        const employeeId = profileData.employee_id || approvalData.employee_id || "N/A";
 
         // Call onLogin callback
         onLogin(user, role, employeeId, userName);

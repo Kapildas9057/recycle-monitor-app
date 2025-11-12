@@ -5,7 +5,7 @@ import { EcoButton } from "@/components/ui/eco-button";
 import { InputWithIcon } from "@/components/ui/input-with-icon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import { useTamilText } from "@/hooks/useTamilText";
 import type { WasteType, WasteEntry } from "@/types";
 

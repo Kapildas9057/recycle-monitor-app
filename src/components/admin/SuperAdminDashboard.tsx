@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { Shield, Users, Trash2, Database, Settings, BarChart3, LogOut } from "lucide-react";
+import { Shield, Users, Trash2, Database, Settings, BarChart3, LogOut, UserCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import type { WasteEntry } from "@/types";
 // using modular getFirestore instance
 import { getFirestore, collection, getDocs, deleteDoc, doc } from "firebase/firestore";
+import SuperAdminApprovalsTab from "./SuperAdminApprovalsTab";
 import SuperAdminUsersTab from "./SuperAdminUsersTab";
 import SuperAdminDataTab from "./SuperAdminDataTab";
 import SuperAdminAnalyticsTab from "./SuperAdminAnalyticsTab";
@@ -40,7 +41,7 @@ export default function SuperAdminDashboard({
   onRejectEntry,
   onClearAllData,
 }: SuperAdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState("users");
+  const [activeTab, setActiveTab] = useState("approvals");
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalEmployees: 0,
@@ -157,7 +158,11 @@ export default function SuperAdminDashboard({
         <Card className="border-border bg-card">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <CardHeader className="border-b border-border">
-              <TabsList className="grid w-full grid-cols-5 bg-muted">
+              <TabsList className="grid w-full grid-cols-6 bg-muted">
+                <TabsTrigger value="approvals" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <UserCheck className="w-4 h-4 mr-2" />
+                  Approvals
+                </TabsTrigger>
                 <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   <Users className="w-4 h-4 mr-2" />
                   Users
@@ -182,6 +187,10 @@ export default function SuperAdminDashboard({
             </CardHeader>
 
             <CardContent className="p-6">
+              <TabsContent value="approvals" className="mt-0">
+                <SuperAdminApprovalsTab onRefresh={loadStats} />
+              </TabsContent>
+
               <TabsContent value="users" className="mt-0">
                 <SuperAdminUsersTab onRefresh={loadStats} />
               </TabsContent>
