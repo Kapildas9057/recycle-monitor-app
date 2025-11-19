@@ -31,7 +31,7 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
   const filteredEntries = wasteEntries.filter(entry => {
     const matchesSearch = 
       entry.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      entry.employeeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      entry.employee_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       entry.wasteType.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || entry.status === statusFilter;
@@ -233,7 +233,7 @@ export default function ReviewTab({ wasteEntries, onApprove, onReject }: ReviewT
                     <TableCell className="font-medium">
                       <span>{entry.employeeName}</span>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{entry.employeeId}</TableCell>
+                    <TableCell className="text-muted-foreground">{entry.employee_id}</TableCell>
                     <TableCell>
                       <span>{entry.wasteType}</span>
                     </TableCell>

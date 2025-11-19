@@ -1,64 +1,79 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper function to check if user is super admin
+
+    // --- Helper functions ---
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+
     function isSuperAdmin() {
-      return request.auth != null && request.auth.token.email == 'kd850539@gmail.com';
+      return request.auth != null &&
+             request.auth.token.email == "kd850539@gmail.com";
     }
-    
-    // Helper function to check if user is admin
-    function isAdmin() {
-      return request.auth != null && 
-        exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role == 'admin';
+
+    async function userRole() {
+      if (!isLoggedIn()) return null;
+
+      return get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role;
     }
-    
-    // Helper function to check if user is employee
-    function isEmployee() {
-      return request.auth != null && 
-        exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role == 'employee';
+
+    // ================================================================
+    // APPROVAL REQUESTS
+    // ================================================================
+    match /approval_requests/{uid} {
+
+      // Anyone logged in can create their own approval request
+      allow create: if isLoggedIn() && uid == request.auth.uid;
+
+      // Super admin can read & update all
+      allow read, update: if isSuperAdmin();
+
+      // No one else can read others' requests (privacy)
+      allow read: if isLoggedIn() && uid == request.auth.uid;
     }
-    
-    // Approval requests - only super admin can manage
-    match /approval_requests/{requestId} {
+
+    // ================================================================
+    // USER PROFILES
+    // ================================================================
+    match /user_profiles/{uid} {
+
+      // Super admin can manage all profiles
       allow read, write: if isSuperAdmin();
-      allow create: if request.auth != null; // Allow users to create their own approval request
+
+      // Normal users can only read their own profile
+      allow read: if isLoggedIn() && uid == request.auth.uid;
     }
-    
-    // Users collection - deprecated, keeping for backward compatibility
-    match /users/{userId} {
-      allow read: if isSuperAdmin() || isAdmin() || request.auth.uid == userId;
-      allow write: if isSuperAdmin();
+
+    // ================================================================
+    // USER ROLES
+    // ================================================================
+    match /user_roles/{uid} {
+
+      // Super admin full control
+      allow read, write: if isSuperAdmin();
+
+      // User can read their own role
+      allow read: if isLoggedIn() && uid == request.auth.uid;
     }
-    
-    // User profiles
-    match /user_profiles/{userId} {
-      allow read: if isSuperAdmin() || isAdmin() || request.auth.uid == userId;
-      allow write: if isSuperAdmin();
-      allow create: if isSuperAdmin(); // Only super admin can create profiles (during approval)
-    }
-    
-    // User roles
-    match /user_roles/{userId} {
-      allow read: if isSuperAdmin() || isAdmin() || request.auth.uid == userId;
-      allow write: if isSuperAdmin();
-      allow create: if isSuperAdmin(); // Only super admin can assign roles (during approval)
-    }
-    
-    // Waste entries
-    match /waste_entries/{entryId} {
-      // Simplified read access to avoid listener failures
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if isSuperAdmin() || isAdmin();
+
+    // ================================================================
+    // WASTE ENTRIES
+    // ================================================================
+    match /waste_entries/{docId} {
+
+      // Anyone logged in can create waste entries
+      allow create: if isLoggedIn();
+
+      // Employees & admins can read all waste entries
+      allow read: if isLoggedIn();
+
+      // Only admins & super-admins can update entries
+      allow update: if isSuperAdmin() ||
+                     userRole() == "admin";
+
+      // Only super-admin can delete entries
       allow delete: if isSuperAdmin();
-    }
-    
-    // Super admins collection (if needed)
-    match /super_admins/{adminId} {
-      allow read, write: if isSuperAdmin();
     }
   }
 }

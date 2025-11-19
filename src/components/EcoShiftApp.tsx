@@ -29,7 +29,7 @@ interface AppUser {
   id: string;
   name: string;
   type: 'employee' | 'admin' | 'super_admin';
-  employeeId?: string;
+  employee_id?: string;
 }
 
 export default function EcoShiftApp() {
@@ -69,7 +69,7 @@ export default function EcoShiftApp() {
               id: user.uid,
               name: profile.name || user.email || "Unknown",
               type: role === "admin" ? "admin" : "employee",
-              employeeId: profile.employee_id
+              employee_id: profile.employee_id
             });
           } else {
             // No profile found - create a minimal session
@@ -78,7 +78,7 @@ export default function EcoShiftApp() {
               id: user.uid,
               name: user.displayName || user.email || "Unknown",
               type: "employee",
-              employeeId: undefined
+              employee_id: undefined
             });
           }
         } catch (err) {
@@ -104,10 +104,10 @@ export default function EcoShiftApp() {
     if (currentUser.type === "admin" || currentUser.type === 'super_admin') {
       q = query(collection(fdb, "waste_entries"), orderBy("created_at", "desc"));
     } else {
-      // For employees, only query if employeeId exists
-      const eid = (currentUser.employeeId || "").trim();
+      // For employees, only query if employee_id exists
+      const eid = (currentUser.employee_id || "").trim();
       if (!eid) {
-        console.warn("Employee has no employeeId, skipping waste entries listener");
+        console.warn("Employee has no employee_id, skipping waste entries listener");
         setWasteEntries([]);
         return;
       }
@@ -129,12 +129,12 @@ export default function EcoShiftApp() {
     return () => unsub();
   }, [currentUser]);
 
-  const handleLogin = (user: any, role: string, employeeId: string, name: string) => {
+  const handleLogin = (user: any, role: string, employee_id: string, name: string) => {
     setCurrentUser({
       id: user.uid,
       name,
       type: role as 'employee'|'admin'|'super_admin',
-      employeeId
+      employee_id
     });
   };
 
@@ -148,7 +148,7 @@ export default function EcoShiftApp() {
     await saveEntry({
       ...entryData,
       employeeName: currentUser.name,
-      employeeId: currentUser.employeeId || entryData.employeeId,
+      employee_id: currentUser.employee_id || entryData.employee_id,
       status: 'pending' as const
     }, imageFile);
   };
@@ -207,7 +207,7 @@ export default function EcoShiftApp() {
       <div className="absolute top-4 right-4">
         <button onClick={handleLogout} className="px-4 py-2 bg-destructive text-destructive-foreground rounded" style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}>{t("logout")}</button>
       </div>
-        <WasteEntryForm employeeId={currentUser.employeeId || currentUser.id} onSubmit={handleWasteSubmission} />
+        <WasteEntryForm employee_id={currentUser.employee_id || currentUser.id} onSubmit={handleWasteSubmission} />
       </div>
     );
   }

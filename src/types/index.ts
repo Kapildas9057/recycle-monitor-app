@@ -1,13 +1,13 @@
 export interface User {
   id: string;
   name: string;
-  employeeId?: string;
+  employee_id?: string;
   type: 'employee' | 'admin' | 'super_admin';
 }
 
 export interface WasteEntry {
   id: string;
-  employeeId: string;
+  employee_id: string;
   employeeName: string;
   wasteType: string;
   amount: number;
@@ -33,7 +33,7 @@ export interface SummaryData {
 }
 
 export interface LeaderboardEntry {
-  employeeId: string;
+  employee_id: string;
   employeeName: string;
   totalWaste: number;
   rank: number;

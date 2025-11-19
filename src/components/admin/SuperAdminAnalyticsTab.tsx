@@ -95,7 +95,7 @@ export default function SuperAdminAnalyticsTab({
                   </div>
                   <div>
                     <p className="font-medium text-foreground">{leader.employeeName || "Unknown"}</p>
-                    <p className="text-sm text-muted-foreground">{leader.employeeId}</p>
+                    <p className="text-sm text-muted-foreground">{leader.employee_id}</p>
                   </div>
                 </div>
                 <p className="text-lg font-semibold text-foreground">{leader.totalWaste} kg</p>

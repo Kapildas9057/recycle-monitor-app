@@ -40,28 +40,28 @@ import {
 const fdb = getFirestore();
 
 interface LoginFormProps {
-  onLogin: (user: FirebaseUser, role: string, employeeId: string, name: string) => void;
+  onLogin: (user: FirebaseUser, role: string, employee_id: string, name: string) => void;
 }
 
-// Helper: Generate employee ID (KEEP YOUR PERFECT FORMAT)
-const generateEmployeeId = async (role: "employee" | "admin"): Promise<string> => {
+// Generate ID
+const generateemployee_id = async (role: "employee" | "admin"): Promise<string> => {
   const prefix = role === "admin" ? "ADM" : "EMP";
   const timestamp = Date.now().toString().slice(-6);
   const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
   return `${prefix}-${timestamp}-${random}`;
 };
 
-// Helper: Validate employee ID format (KEEP)
-const validateEmployeeId = (id: string): boolean => {
+// Validate ID format
+const validateemployee_id = (id: string): boolean => {
   return /^(EMP|ADM)-\d{6}-\d{3}$/.test(id.trim());
 };
 
-// Helper: Get email by employee ID from Firestore (KEEP)
-const getEmailByEmployeeId = async (employeeId: string): Promise<string | null> => {
+// Get email by employee/admin ID
+const getEmailByemployee_id = async (employee_id: string): Promise<string | null> => {
   try {
-    if (!employeeId) return null;
+    if (!employee_id) return null;
     const usersRef = collection(fdb, "users");
-    const q = query(usersRef, where("employee_id", "==", employeeId));
+    const q = query(usersRef, where("employee_id", "==", employee_id));
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
@@ -89,13 +89,11 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
   const [resetEmail, setResetEmail] = useState("");
   const [isResetting, setIsResetting] = useState(false);
 
-  // SUPER ADMIN credentials (hidden from UI)
   const SUPER_ADMIN_EMAIL = "kd850539@gmail.com";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation (KEEP YOUR PERFECT LOGIC)
     if (!isSignUp && (!loginId || !password)) {
       const msg = userType === "employee" ? t("please_enter_id_password") : "Please enter both ID/email and password";
       toast.error(msg);
@@ -118,21 +116,13 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
 
     try {
       if (isSignUp) {
-        // ============================================
-        // SIGN UP FLOW - WITH APPROVAL WORKFLOW
-        // ============================================
-
-        // 1. Generate unique employee ID
-        const generatedId = await generateEmployeeId(userType);
-
-        // 2. Create user in Firebase Auth
+        // SIGN UP FLOW
+        const generatedId = await generateemployee_id(userType);
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // 3. Update display name
         await updateProfile(user, { displayName: name });
 
-        // 4. Create approval request (status: pending)
         await setDoc(doc(fdb, "approval_requests", user.uid), {
           uid: user.uid,
           email: email,
@@ -143,16 +133,13 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
           created_at: serverTimestamp(),
         });
 
-        const successMsg = userType === "employee" 
+        const successMsg = userType === "employee"
           ? `${t("account_created")} ${generatedId}. ${t("approval_pending")}`
           : `Account created successfully! Your ${userType.toUpperCase()} ID is: ${generatedId}. Awaiting Super Admin approval.`;
-        
-        toast.success(successMsg);
 
-        // Sign out immediately - user must wait for approval
+        toast.success(successMsg);
         await auth.signOut();
 
-        // Reset form
         setIsSignUp(false);
         setName("");
         setEmail("");
@@ -160,44 +147,59 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         setLoginId("");
 
       } else {
-        // ============================================
-        // SIGN IN FLOW WITH SUPER ADMIN DETECTION
-        // ============================================
+        // ================
+        // SIGN IN FLOW FIX
+        // ================
 
         let emailToUse = loginId.trim();
 
-        // Check if login ID is an employee/admin ID (not email)
-        if (validateEmployeeId(loginId.trim())) {
-          const foundEmail = await getEmailByEmployeeId(loginId.trim());
+        // If ID format, convert to email
+        if (validateemployee_id(loginId.trim())) {
+          const foundEmail = await getEmailByemployee_id(loginId.trim());
           if (!foundEmail) {
-            const errorMsg = userType === "employee" 
-              ? t("invalid_employee_id")
-              : "Invalid employee/admin ID. Please check and try again.";
-            toast.error(errorMsg);
+            toast.error(userType === "employee" ? t("invalid_employee_id") : "Invalid admin/employee ID.");
             setIsLoading(false);
             return;
           }
           emailToUse = foundEmail;
+        } else {
+          // If not ID, check valid email format
+          const isValidEmail =
+            emailToUse.includes("@") &&
+            emailToUse.includes(".") &&
+            emailToUse.length > 5;
+
+          if (!isValidEmail) {
+            toast.error("Please enter a valid email address or employee ID");
+            setIsLoading(false);
+            return;
+          }
         }
 
-        // Sign in with Firebase Auth
+        // SIGN IN
         const userCredential = await signInWithEmailAndPassword(auth, emailToUse, password);
         const user = userCredential.user;
 
-        if (!user) {
-          throw new Error("Sign in failed - no user returned");
+        if (!user) throw new Error("Sign in failed - no user returned");
+
+        // IMPORTANT FIX:
+        // Force refresh ID token immediately after sign-in so Firestore security rules
+        // receive the latest token (with email claim). This prevents "missing permissions".
+        try {
+          await user.getIdToken(true);
+        } catch (tokenErr) {
+          console.warn("Failed to refresh ID token after sign-in:", tokenErr);
+          // Continue anyway; the following checks may still work
         }
 
-        // 🔐 CHECK FOR SUPER ADMIN (HIDDEN ROLE)
+        // SUPER ADMIN
         if (user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
-          // Super Admin detected - bypass all checks
           onLogin(user, "super_admin", "SUPER-ADMIN", "Super Admin");
           toast.success("🔐 Super Admin Access Granted");
           setIsLoading(false);
           return;
         }
 
-        // Check approval status
         const approvalDocRef = doc(fdb, "approval_requests", user.uid);
         const approvalDocSnap = await getDoc(approvalDocRef);
 
@@ -211,39 +213,41 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         const approvalData = approvalDocSnap.data();
 
         if (approvalData.status === "pending") {
-          toast.error("Your account is awaiting Super Admin approval. Please check back later.");
+          toast.error("Your account is awaiting Super Admin approval.");
           await auth.signOut();
           setIsLoading(false);
           return;
         }
 
         if (approvalData.status === "rejected") {
-          toast.error("Your account was rejected. Please contact the administrator.");
+          toast.error("Your account was rejected.");
           await auth.signOut();
           setIsLoading(false);
           return;
         }
 
-        // User is approved - fetch profile data
         const profileDocRef = doc(fdb, "user_profiles", user.uid);
         const profileDocSnap = await getDoc(profileDocRef);
 
         if (!profileDocSnap.exists()) {
-          toast.error("Profile not found. Please contact Super Admin.");
+          toast.error("Profile not found.");
           await auth.signOut();
           setIsLoading(false);
           return;
         }
 
         const profileData = profileDocSnap.data();
-        const userName = profileData.name || user.displayName || user.email?.split("@")[0] || "User";
+        const userName =
+          profileData.name ||
+          user.displayName ||
+          user.email?.split("@")[0] ||
+          "User";
 
-        // Fetch user role
         const roleDocRef = doc(fdb, "user_roles", user.uid);
         const roleDocSnap = await getDoc(roleDocRef);
 
         if (!roleDocSnap.exists()) {
-          toast.error("Role not found. Please contact Super Admin.");
+          toast.error("Role not found.");
           await auth.signOut();
           setIsLoading(false);
           return;
@@ -251,41 +255,43 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
 
         const role = roleDocSnap.data().role;
 
-        // Ensure role matches selected user type
         if (role !== userType) {
-          toast.error(`This account is registered as ${role}, not ${userType}. Please select the correct role.`);
+          toast.error(`This account is registered as ${role}, not ${userType}.`);
           await auth.signOut();
           setIsLoading(false);
           return;
         }
 
-        const employeeId = profileData.employee_id || approvalData.employee_id || "N/A";
+        const employee_id = profileData.employee_id || approvalData.employee_id || "N/A";
 
-        // Call onLogin callback
-        onLogin(user, role, employeeId, userName);
+        onLogin(user, role, employee_id, userName);
 
-        const loginSuccessMsg = role === "admin" ? "Admin login successful" : (userType === "employee" ? t("login_successful") : "Login successful");
-        toast.success(loginSuccessMsg);
+        toast.success(
+          role === "admin"
+            ? "Admin login successful"
+            : userType === "employee"
+            ? t("login_successful")
+            : "Login successful"
+        );
       }
 
     } catch (error: any) {
       console.error("Authentication error:", error);
 
-      // Handle specific Firebase errors (KEEP YOUR PERFECT HANDLING)
       let errorMessage = userType === "employee" ? t("authentication_failed") : "Authentication failed";
 
       if (error.code === "auth/email-already-in-use") {
-        errorMessage = userType === "employee" ? t("email_already_registered") : "This email is already registered. Please sign in instead.";
+        errorMessage = userType === "employee" ? t("email_already_registered") : "Email already registered.";
       } else if (error.code === "auth/invalid-email") {
         errorMessage = userType === "employee" ? t("invalid_email") : "Invalid email format";
       } else if (error.code === "auth/user-not-found") {
-        errorMessage = userType === "employee" ? t("no_account_found") : "No account found with this email/ID";
+        errorMessage = userType === "employee" ? t("no_account_found") : "No account found";
       } else if (error.code === "auth/wrong-password") {
         errorMessage = userType === "employee" ? t("incorrect_password") : "Incorrect password";
       } else if (error.code === "auth/invalid-credential") {
-        errorMessage = userType === "employee" ? t("invalid_email_or_password") : "Invalid email/ID or password";
+        errorMessage = userType === "employee" ? t("invalid_email_or_password") : "Invalid email or password";
       } else if (error.code === "auth/weak-password") {
-        errorMessage = userType === "employee" ? t("weak_password") : "Password should be at least 6 characters";
+        errorMessage = userType === "employee" ? t("weak_password") : "Weak password";
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -307,20 +313,25 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
     setIsResetting(true);
     try {
       await sendPasswordResetEmail(auth, resetEmail);
-      const successMsg = userType === "employee" ? t("reset_link_sent") : "Password reset link sent to your email! Please check your inbox.";
-      toast.success(successMsg);
+      toast.success(
+        userType === "employee"
+          ? t("reset_link_sent")
+          : "Password reset link sent!"
+      );
       setShowForgotPassword(false);
       setResetEmail("");
     } catch (error: any) {
       console.error("Password reset error:", error);
 
-      let errorMessage = userType === "employee" ? t("failed_to_send_reset") : "Failed to send reset email";
+      let errorMessage =
+        userType === "employee" ? t("failed_to_send_reset") : "Failed to send reset email";
+
       if (error.code === "auth/user-not-found") {
-        errorMessage = userType === "employee" ? t("no_account_found") : "No account found with this email";
+        errorMessage =
+          userType === "employee" ? t("no_account_found") : "No account found";
       } else if (error.code === "auth/invalid-email") {
-        errorMessage = userType === "employee" ? t("invalid_email") : "Invalid email address";
-      } else if (error.message) {
-        errorMessage = error.message;
+        errorMessage =
+          userType === "employee" ? t("invalid_email") : "Invalid email";
       }
 
       toast.error(errorMessage);
@@ -329,7 +340,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
     }
   };
 
-  // ✅ YOUR PERFECT UI (KEEP 100% - NO CHANGES!)
+  // UI — untouched
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-accent/20 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-eco border-card-border">
@@ -339,7 +350,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
           </div>
           <div>
             <CardTitle className="text-2xl font-display text-foreground" style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}>
-              {isSignUp 
+              {isSignUp
                 ? (userType === "employee" ? t("create_account") : "Create Account")
                 : (userType === "employee" ? t("welcome_ecoshift") : "Welcome to EcoShift")}
             </CardTitle>
@@ -357,6 +368,8 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
             </TabsList>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+
+              {/* SIGN UP UI — untouched */}
               {isSignUp ? (
                 <>
                   <div className="space-y-2">
@@ -395,7 +408,11 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
                     <InputWithIcon
                       icon={<Lock className="w-4 h-4" />}
                       type="password"
-                      placeholder={userType === "employee" ? `${t("enter_password")} (${t("min_6_chars")})` : "Enter your password (min 6 characters)"}
+                      placeholder={
+                        userType === "employee"
+                          ? `${t("enter_password")} (${t("min_6_chars")})`
+                          : "Enter your password (min 6 characters)"
+                      }
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
@@ -406,7 +423,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
 
                   <div className="p-3 bg-accent/20 rounded-lg">
                     <p className="text-xs text-muted-foreground" style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}>
-                      {userType === "employee" 
+                      {userType === "employee"
                         ? `${t("id_auto_generated")} ${t("emp_format")}`
                         : `Your unique ID will be automatically generated after signup.${userType === "admin" ? " (ADM-XXXXXX-XXX format)" : " (EMP-XXXXXX-XXX format)"}`}
                     </p>
@@ -414,6 +431,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
                 </>
               ) : (
                 <>
+                  {/* SIGN IN UI — untouched */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground" style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}>
                       {userType === "admin" ? "Admin ID or Email" : t("employee_id_or_email")}
@@ -433,21 +451,24 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
                       <label className="text-sm font-medium text-foreground" style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}>
                         {userType === "employee" ? t("password") : "Password"}
                       </label>
+
                       <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
                         <DialogTrigger asChild>
                           <Button variant="link" className="h-auto p-0 text-xs" style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}>
                             {userType === "employee" ? t("forgot_password") : "Forgot password?"}
                           </Button>
                         </DialogTrigger>
+
                         <DialogContent>
                           <DialogHeader>
                             <DialogTitle style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}>
                               {userType === "employee" ? t("reset_password") : "Reset Password"}
                             </DialogTitle>
                             <DialogDescription style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}>
-                              {userType === "employee" ? t("reset_description") : "Enter your email address and we'll send you a password reset link."}
+                              {userType === "employee" ? t("reset_description") : "Enter your email address and we'll send a reset link."}
                             </DialogDescription>
                           </DialogHeader>
+
                           <div className="space-y-4 pt-4">
                             <InputWithIcon
                               icon={<Mail className="w-4 h-4" />}
@@ -457,20 +478,22 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
                               onChange={(e) => setResetEmail(e.target.value)}
                               style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}
                             />
+
                             <Button
                               onClick={handleForgotPassword}
                               disabled={isResetting}
                               className="w-full"
                               style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}
                             >
-                              {isResetting 
-                                ? (userType === "employee" ? t("sending") : "Sending...") 
+                              {isResetting
+                                ? (userType === "employee" ? t("sending") : "Sending...")
                                 : (userType === "employee" ? t("send_reset_link") : "Send Reset Link")}
                             </Button>
                           </div>
                         </DialogContent>
                       </Dialog>
                     </div>
+
                     <InputWithIcon
                       icon={<Lock className="w-4 h-4" />}
                       type="password"
@@ -485,7 +508,13 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
                 </>
               )}
 
-              <EcoButton type="submit" className="w-full" size="lg" disabled={isLoading} style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}>
+              <EcoButton
+                type="submit"
+                className="w-full"
+                size="lg"
+                disabled={isLoading}
+                style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}
+              >
                 {isLoading
                   ? isSignUp
                     ? (userType === "employee" ? t("creating_account") : "Creating account...")
@@ -509,15 +538,23 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
               >
                 {isSignUp ? (
                   userType === "employee" ? (
-                    <>{t("already_have_account")} <span className="text-primary font-medium">{t("sign_in")}</span></>
+                    <>
+                      {t("already_have_account")} <span className="text-primary font-medium">{t("sign_in")}</span>
+                    </>
                   ) : (
-                    <>Already have an account? <span className="text-primary font-medium">Sign In</span></>
+                    <>
+                      Already have an account? <span className="text-primary font-medium">Sign In</span>
+                    </>
                   )
                 ) : (
                   userType === "employee" ? (
-                    <>{t("no_account")} <span className="text-primary font-medium">{t("sign_up")}</span></>
+                    <>
+                      {t("no_account")} <span className="text-primary font-medium">{t("sign_up")}</span>
+                    </>
                   ) : (
-                    <>Don&apos;t have an account? <span className="text-primary font-medium">Sign Up</span></>
+                    <>
+                      Don&apos;t have an account? <span className="text-primary font-medium">Sign Up</span>
+                    </>
                   )
                 )}
               </button>
@@ -528,3 +565,4 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
     </div>
   );
 }
+

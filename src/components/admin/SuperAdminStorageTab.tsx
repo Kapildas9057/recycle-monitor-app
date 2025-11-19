@@ -139,7 +139,7 @@ export default function SuperAdminStorageTab() {
       <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
         <p className="text-sm text-muted-foreground">
           <strong>Note:</strong> Images are stored at{" "}
-          <code className="bg-muted px-1 py-0.5 rounded text-xs">/waste_images/&#123;employeeId&#125;/&#123;imageId&#125;.jpg</code>
+          <code className="bg-muted px-1 py-0.5 rounded text-xs">/waste_images/&#123;employee_id&#125;/&#123;imageId&#125;.jpg</code>
         </p>
       </div>
     </div>

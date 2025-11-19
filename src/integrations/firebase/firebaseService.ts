@@ -13,7 +13,7 @@ const fdb = getFirestore();
 
 // Type for your waste entry
 export interface WasteEntry {
-  employeeId: string;
+  employee_id: string;
   wasteType: string;
   amount: number;
   dateTime: string;
@@ -45,15 +45,15 @@ export async function getAllWasteEntries(): Promise<DocumentData[]> {
 }
 
 // Get entries by employee
-export async function getEmployeeWasteEntries(employeeId: string): Promise<DocumentData[]> {
+export async function getEmployeeWasteEntries(employee_id: string): Promise<DocumentData[]> {
   try {
-    if (!employeeId) {
-      console.warn("getEmployeeWasteEntries called without employeeId; returning empty list");
+    if (!employee_id) {
+      console.warn("getEmployeeWasteEntries called without employee_id; returning empty list");
       return [];
     }
     const q = query(
       collection(fdb, "wasteEntries"),
-      where("employeeId", "==", employeeId),
+      where("employee_id", "==", employee_id),
       orderBy("dateTime", "desc")
     );
     const querySnapshot = await getDocs(q);

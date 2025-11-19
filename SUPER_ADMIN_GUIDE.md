@@ -75,7 +75,7 @@ This guide covers the Super Admin functionality for the EcoShift Waste Managemen
 - Delete images from Firebase Storage
 - View file sizes and upload dates
 
-**Storage Path**: `/waste_images/{employeeId}/{imageId}.jpg`
+**Storage Path**: `/waste_images/{employee_id}/{imageId}.jpg`
 
 ### 5. Settings
 **Location**: Settings Tab
@@ -109,7 +109,7 @@ user_roles/
 
 waste_entries/
   - {entryId}
-    - employeeId
+    - employee_id
     - employeeName
     - wasteType
     - amount
@@ -129,8 +129,8 @@ The Super Admin has full access defined in `firestore.rules`:
 
 ### Firestore Indexes
 Located in `firestore.indexes.json`:
-- `employeeId + created_at` (DESC)
-- `employeeId + wasteType` (ASC)
+- `employee_id + created_at` (DESC)
+- `employee_id + wasteType` (ASC)
 - `created_at + amount` (DESC)
 - `status + created_at` (DESC)
 
@@ -139,7 +139,7 @@ Located in `firestore.indexes.json`:
 ### Storage Rules
 Located in `storage.rules`:
 
-**Waste Images** (`/waste_images/{employeeId}/{imageId}`):
+**Waste Images** (`/waste_images/{employee_id}/{imageId}`):
 - Employees: Can upload their own images
 - Admins & Super Admin: Can view all images
 - Super Admin: Can delete any image

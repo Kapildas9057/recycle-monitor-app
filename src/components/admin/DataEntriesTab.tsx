@@ -18,7 +18,7 @@ export default function DataEntriesTab({ wasteEntries, onClearAllData }: DataEnt
   const filteredEntries = wasteEntries.filter(
     entry => 
       entry.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      entry.employeeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      entry.employee_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       entry.wasteType.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -44,7 +44,7 @@ export default function DataEntriesTab({ wasteEntries, onClearAllData }: DataEnt
     const headers = ['Employee Name', 'Employee ID', 'Waste Type', 'Amount (kg)', 'Date & Time', 'Status'];
     const csvData = filteredEntries.map(entry => [
       entry.employeeName,
-      entry.employeeId,
+      entry.employee_id,
       entry.wasteType,
       entry.amount,
       formatDate(entry.dateTime),
@@ -131,7 +131,7 @@ export default function DataEntriesTab({ wasteEntries, onClearAllData }: DataEnt
                 {filteredEntries.map((entry) => (
                   <TableRow key={entry.id}>
                     <TableCell className="font-medium">{entry.employeeName}</TableCell>
-                    <TableCell className="text-muted-foreground">{entry.employeeId}</TableCell>
+                    <TableCell className="text-muted-foreground">{entry.employee_id}</TableCell>
                     <TableCell>
                       <span>{entry.wasteType}</span>
                     </TableCell>

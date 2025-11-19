@@ -56,7 +56,7 @@ export default function LeaderboardTab({ leaderboardData }: LeaderboardTabProps)
             <div className="grid grid-cols-3 gap-4">
               {leaderboardData.slice(0, 3).map((entry, index) => (
                 <div 
-                  key={entry.employeeId} 
+                  key={entry.employee_id}
                   className={`text-center p-4 rounded-lg ${
                     index === 0 ? 'bg-gradient-to-b from-yellow-50 to-yellow-100 border-2 border-yellow-200' :
                     index === 1 ? 'bg-gradient-to-b from-gray-50 to-gray-100 border-2 border-gray-200' :
@@ -75,7 +75,7 @@ export default function LeaderboardTab({ leaderboardData }: LeaderboardTabProps)
                     {entry.employeeName}
                   </h3>
                   <p className="text-xs text-muted-foreground mb-2">
-                    ID: {entry.employeeId}
+                    ID: {entry.employee_id}
                   </p>
                   <div className="text-lg font-bold text-primary">
                     {entry.totalWaste.toFixed(1)} kg
@@ -102,7 +102,7 @@ export default function LeaderboardTab({ leaderboardData }: LeaderboardTabProps)
           <div className="space-y-3">
             {leaderboardData.map((entry) => (
               <div 
-                key={entry.employeeId}
+                key={entry.employee_id}
                 className={`flex items-center justify-between p-4 rounded-lg border transition-all duration-200 hover:shadow-md ${
                   entry.rank <= 3 ? 'bg-accent/50 border-primary/20' : 'bg-card border-card-border'
                 }`}
@@ -121,7 +121,7 @@ export default function LeaderboardTab({ leaderboardData }: LeaderboardTabProps)
                       {entry.employeeName}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      Employee ID: {entry.employeeId}
+                      Employee ID: {entry.employee_id}
                     </p>
                   </div>
                 </div>

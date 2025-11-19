@@ -4,12 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/use-toast";
-import { getFirestore, collection, getDocs, doc, updateDoc, setDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy } from "firebase/firestore";
+import {
+  getFirestore,
+  collection,
+  updateDoc,
+  setDoc,
+  deleteDoc,
+  onSnapshot,
+  serverTimestamp,
+  query,
+  orderBy,
+  doc,
+} from "firebase/firestore";
 
 const fdb = getFirestore();
 
 interface ApprovalRequest {
-  id: string;
   uid: string;
   email: string;
   name: string;
@@ -25,34 +35,43 @@ export default function SuperAdminApprovalsTab({ onRefresh }: { onRefresh: () =>
   const [processing, setProcessing] = useState<string | null>(null);
 
   useEffect(() => {
-    // Real-time listener for approval requests
+    // Real-time listener
     const q = query(collection(fdb, "approval_requests"), orderBy("created_at", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const requestsData = snapshot.docs.map(d => ({ 
-        id: d.id, 
-        ...d.data() 
-      } as ApprovalRequest));
-      setRequests(requestsData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Failed to listen to approval requests:", error);
-      toast.error("Failed to load approval requests");
-      setLoading(false);
-    });
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const mapped = snapshot.docs.map((d) => {
+          return {
+            uid: d.id, // doc ID is uid
+            ...d.data(),
+          } as ApprovalRequest;
+        });
+
+        setRequests(mapped);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Failed to load approval requests:", error);
+        toast.error("Failed to load approval requests");
+        setLoading(false);
+      }
+    );
 
     return () => unsubscribe();
   }, []);
 
   const handleApprove = async (request: ApprovalRequest) => {
-    setProcessing(request.id);
+    setProcessing(request.uid);
+
     try {
-      // 1. Update approval request status
+      // 1. Mark as approved
       await updateDoc(doc(fdb, "approval_requests", request.uid), {
         status: "approved",
         approved_at: serverTimestamp(),
       });
 
-      // 2. Create user profile
+      // 2. Create profile
       await setDoc(doc(fdb, "user_profiles", request.uid), {
         user_id: request.uid,
         name: request.name,
@@ -61,17 +80,17 @@ export default function SuperAdminApprovalsTab({ onRefresh }: { onRefresh: () =>
         updated_at: serverTimestamp(),
       });
 
-      // 3. Create user role
+      // 3. Create role
       await setDoc(doc(fdb, "user_roles", request.uid), {
         user_id: request.uid,
         role: request.role,
         created_at: serverTimestamp(),
       });
 
-      toast.success(`✅ Approved ${request.name} (${request.employee_id})`);
+      toast.success(`Approved ${request.name} (${request.employee_id})`);
       onRefresh();
-    } catch (error) {
-      console.error("Failed to approve user:", error);
+    } catch (err) {
+      console.error("Approval failed:", err);
       toast.error("Failed to approve user");
     } finally {
       setProcessing(null);
@@ -79,20 +98,20 @@ export default function SuperAdminApprovalsTab({ onRefresh }: { onRefresh: () =>
   };
 
   const handleReject = async (request: ApprovalRequest) => {
-    if (!confirm(`Are you sure you want to reject ${request.name}?`)) return;
+    if (!confirm(`Reject ${request.name}?`)) return;
 
-    setProcessing(request.id);
+    setProcessing(request.uid);
+
     try {
-      // Update approval request status to rejected
       await updateDoc(doc(fdb, "approval_requests", request.uid), {
         status: "rejected",
         rejected_at: serverTimestamp(),
       });
 
-      toast.success(`❌ Rejected ${request.name}`);
+      toast.success(`Rejected ${request.name}`);
       onRefresh();
-    } catch (error) {
-      console.error("Failed to reject user:", error);
+    } catch (err) {
+      console.error(err);
       toast.error("Failed to reject user");
     } finally {
       setProcessing(null);
@@ -100,15 +119,17 @@ export default function SuperAdminApprovalsTab({ onRefresh }: { onRefresh: () =>
   };
 
   const handleDeleteRequest = async (request: ApprovalRequest) => {
-    if (!confirm(`Permanently delete this request for ${request.name}?`)) return;
+    if (!confirm(`Delete request for ${request.name}?`)) return;
 
-    setProcessing(request.id);
+    setProcessing(request.uid);
+
     try {
       await deleteDoc(doc(fdb, "approval_requests", request.uid));
+
       toast.success("Request deleted");
       onRefresh();
-    } catch (error) {
-      console.error("Failed to delete request:", error);
+    } catch (err) {
+      console.error(err);
       toast.error("Failed to delete request");
     } finally {
       setProcessing(null);
@@ -123,51 +144,39 @@ export default function SuperAdminApprovalsTab({ onRefresh }: { onRefresh: () =>
     );
   }
 
-  const pendingRequests = requests.filter(r => r.status === "pending");
-  const approvedRequests = requests.filter(r => r.status === "approved");
-  const rejectedRequests = requests.filter(r => r.status === "rejected");
+  // Categorize requests
+  const pending = requests.filter((r) => r.status === "pending");
+  const approved = requests.filter((r) => r.status === "approved");
+  const rejected = requests.filter((r) => r.status === "rejected");
 
   return (
     <div className="space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-amber-700 dark:text-amber-400">Pending</p>
-              <p className="text-2xl font-bold text-amber-900 dark:text-amber-300">{pendingRequests.length}</p>
-            </div>
-            <Clock className="w-8 h-8 text-amber-500" />
-          </div>
+          <p className="text-sm text-amber-700 dark:text-amber-400">Pending</p>
+          <p className="text-2xl font-bold">{pending.length}</p>
         </div>
+
         <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-green-700 dark:text-green-400">Approved</p>
-              <p className="text-2xl font-bold text-green-900 dark:text-green-300">{approvedRequests.length}</p>
-            </div>
-            <CheckCircle className="w-8 h-8 text-green-500" />
-          </div>
+          <p className="text-sm text-green-700 dark:text-green-400">Approved</p>
+          <p className="text-2xl font-bold">{approved.length}</p>
         </div>
+
         <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-red-700 dark:text-red-400">Rejected</p>
-              <p className="text-2xl font-bold text-red-900 dark:text-red-300">{rejectedRequests.length}</p>
-            </div>
-            <XCircle className="w-8 h-8 text-red-500" />
-          </div>
+          <p className="text-sm text-red-700 dark:text-red-400">Rejected</p>
+          <p className="text-2xl font-bold">{rejected.length}</p>
         </div>
       </div>
 
-      {/* Pending Approvals */}
-      {pendingRequests.length > 0 && (
-        <div>
-          <h3 className="text-lg font-semibold text-foreground mb-3">⏳ Pending Approvals</h3>
-          <div className="border border-border rounded-lg overflow-hidden">
+      {/* Pending Table */}
+      {pending.length > 0 && (
+        <>
+          <h3 className="text-lg font-semibold">⏳ Pending Approvals</h3>
+          <div className="border rounded-lg overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50">
+                <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Employee ID</TableHead>
@@ -176,39 +185,40 @@ export default function SuperAdminApprovalsTab({ onRefresh }: { onRefresh: () =>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
+
               <TableBody>
-                {pendingRequests.map((request) => (
-                  <TableRow key={request.id}>
-                    <TableCell className="font-medium">{request.name}</TableCell>
+                {pending.map((request) => (
+                  <TableRow key={request.uid}>
+                    <TableCell>{request.name}</TableCell>
                     <TableCell>{request.email}</TableCell>
-                    <TableCell className="font-mono text-sm">{request.employee_id}</TableCell>
+                    <TableCell className="font-mono">{request.employee_id}</TableCell>
                     <TableCell>
                       <Badge variant={request.role === "admin" ? "default" : "secondary"}>
-                        {request.role === "admin" ? "🛠️ Admin" : "🧑‍💼 Employee"}
+                        {request.role === "admin" ? "Admin" : "Employee"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {request.created_at?.toDate?.()?.toLocaleDateString() || "N/A"}
+                    <TableCell>
+                      {request.created_at?.toDate?.()?.toLocaleDateString() ?? "N/A"}
                     </TableCell>
+
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex gap-2 justify-end">
                         <Button
                           size="sm"
+                          disabled={processing === request.uid}
                           onClick={() => handleApprove(request)}
-                          disabled={processing === request.id}
-                          className="bg-green-600 hover:bg-green-700 text-white"
+                          className="bg-green-600 text-white"
                         >
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                          Approve
+                          <CheckCircle className="w-4 h-4 mr-1" /> Approve
                         </Button>
+
                         <Button
                           size="sm"
                           variant="destructive"
+                          disabled={processing === request.uid}
                           onClick={() => handleReject(request)}
-                          disabled={processing === request.id}
                         >
-                          <XCircle className="w-4 h-4 mr-1" />
-                          Reject
+                          <XCircle className="w-4 h-4 mr-1" /> Reject
                         </Button>
                       </div>
                     </TableCell>
@@ -217,17 +227,17 @@ export default function SuperAdminApprovalsTab({ onRefresh }: { onRefresh: () =>
               </TableBody>
             </Table>
           </div>
-        </div>
+        </>
       )}
 
-      {/* Approved Users */}
-      {approvedRequests.length > 0 && (
-        <div>
-          <h3 className="text-lg font-semibold text-foreground mb-3">✅ Approved Users</h3>
-          <div className="border border-border rounded-lg overflow-hidden">
+      {/* Approved Table */}
+      {approved.length > 0 && (
+        <>
+          <h3 className="text-lg font-semibold">✅ Approved Users</h3>
+          <div className="border rounded-lg overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50">
+                <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Employee ID</TableHead>
@@ -235,36 +245,37 @@ export default function SuperAdminApprovalsTab({ onRefresh }: { onRefresh: () =>
                   <TableHead>Approved</TableHead>
                 </TableRow>
               </TableHeader>
+
               <TableBody>
-                {approvedRequests.map((request) => (
-                  <TableRow key={request.id} className="bg-green-50/50 dark:bg-green-950/10">
-                    <TableCell className="font-medium">{request.name}</TableCell>
+                {approved.map((request) => (
+                  <TableRow key={request.uid}>
+                    <TableCell>{request.name}</TableCell>
                     <TableCell>{request.email}</TableCell>
-                    <TableCell className="font-mono text-sm">{request.employee_id}</TableCell>
+                    <TableCell className="font-mono">{request.employee_id}</TableCell>
                     <TableCell>
                       <Badge variant={request.role === "admin" ? "default" : "secondary"}>
-                        {request.role === "admin" ? "🛠️ Admin" : "🧑‍💼 Employee"}
+                        {request.role === "admin" ? "Admin" : "Employee"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {request.created_at?.toDate?.()?.toLocaleDateString() || "N/A"}
+                    <TableCell>
+                      {request.created_at?.toDate?.()?.toLocaleDateString() ?? "N/A"}
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </div>
-        </div>
+        </>
       )}
 
-      {/* Rejected Users */}
-      {rejectedRequests.length > 0 && (
-        <div>
-          <h3 className="text-lg font-semibold text-foreground mb-3">❌ Rejected Requests</h3>
-          <div className="border border-border rounded-lg overflow-hidden">
+      {/* Rejected Table */}
+      {rejected.length > 0 && (
+        <>
+          <h3 className="text-lg font-semibold">❌ Rejected Requests</h3>
+          <div className="border rounded-lg overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50">
+                <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Employee ID</TableHead>
@@ -273,27 +284,29 @@ export default function SuperAdminApprovalsTab({ onRefresh }: { onRefresh: () =>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
+
               <TableBody>
-                {rejectedRequests.map((request) => (
-                  <TableRow key={request.id} className="bg-red-50/50 dark:bg-red-950/10">
-                    <TableCell className="font-medium">{request.name}</TableCell>
+                {rejected.map((request) => (
+                  <TableRow key={request.uid}>
+                    <TableCell>{request.name}</TableCell>
                     <TableCell>{request.email}</TableCell>
-                    <TableCell className="font-mono text-sm">{request.employee_id}</TableCell>
+                    <TableCell className="font-mono">{request.employee_id}</TableCell>
                     <TableCell>
                       <Badge variant={request.role === "admin" ? "default" : "secondary"}>
-                        {request.role === "admin" ? "🛠️ Admin" : "🧑‍💼 Employee"}
+                        {request.role === "admin" ? "Admin" : "Employee"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {request.created_at?.toDate?.()?.toLocaleDateString() || "N/A"}
+                    <TableCell>
+                      {request.created_at?.toDate?.()?.toLocaleDateString() ?? "N/A"}
                     </TableCell>
+
                     <TableCell className="text-right">
                       <Button
                         size="sm"
                         variant="ghost"
+                        disabled={processing === request.uid}
                         onClick={() => handleDeleteRequest(request)}
-                        disabled={processing === request.id}
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        className="text-destructive hover:bg-destructive/10"
                       >
                         Delete
                       </Button>
@@ -303,7 +316,7 @@ export default function SuperAdminApprovalsTab({ onRefresh }: { onRefresh: () =>
               </TableBody>
             </Table>
           </div>
-        </div>
+        </>
       )}
 
       {requests.length === 0 && (

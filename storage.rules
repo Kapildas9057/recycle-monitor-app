@@ -8,11 +8,11 @@ service firebase.storage {
     }
     
     // Waste images storage
-    match /waste_images/{employeeId}/{imageId} {
+    match /waste_images/{employee_id}/{imageId} {
       // Employees can upload their own images
       allow create: if request.auth != null && 
                        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.employee_id == employeeId;
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.employee_id == employee_id;
       
       // Super Admin and Admins can view all images
       allow read: if isSuperAdmin() || 

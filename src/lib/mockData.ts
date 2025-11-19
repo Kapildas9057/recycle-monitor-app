@@ -2,27 +2,27 @@ import type { User, WasteEntry, SummaryData, LeaderboardEntry, WasteType } from 
 
 // Mock users for demo
 export const mockUsers: User[] = [
-  { id: "EMP001", name: "John Smith", employeeId: "EMP001", type: "employee" },
-  { id: "EMP002", name: "Sarah Johnson", employeeId: "EMP002", type: "employee" },
-  { id: "EMP003", name: "Mike Davis", employeeId: "EMP003", type: "employee" },
-  { id: "EMP004", name: "Emily Wilson", employeeId: "EMP004", type: "employee" },
-  { id: "EMP005", name: "David Brown", employeeId: "EMP005", type: "employee" },
-  { id: "EMP006", name: "Lisa Garcia", employeeId: "EMP006", type: "employee" },
-  { id: "EMP007", name: "James Miller", employeeId: "EMP007", type: "employee" },
-  { id: "EMP008", name: "Maria Rodriguez", employeeId: "EMP008", type: "employee" },
-  { id: "EMP009", name: "Robert Taylor", employeeId: "EMP009", type: "employee" },
-  { id: "EMP010", name: "Jennifer Anderson", employeeId: "EMP010", type: "employee" },
-  { id: "EMP011", name: "Michael Thomas", employeeId: "EMP011", type: "employee" },
-  { id: "EMP012", name: "Amanda Jackson", employeeId: "EMP012", type: "employee" },
-  { id: "EMP013", name: "Christopher White", employeeId: "EMP013", type: "employee" },
-  { id: "EMP014", name: "Jessica Harris", employeeId: "EMP014", type: "employee" },
-  { id: "EMP015", name: "Daniel Martin", employeeId: "EMP015", type: "employee" },
-  { id: "EMP016", name: "Ashley Thompson", employeeId: "EMP016", type: "employee" },
-  { id: "EMP017", name: "Matthew Garcia", employeeId: "EMP017", type: "employee" },
-  { id: "EMP018", name: "Stephanie Lee", employeeId: "EMP018", type: "employee" },
-  { id: "EMP019", name: "Andrew Clark", employeeId: "EMP019", type: "employee" },
-  { id: "EMP020", name: "Nicole Lewis", employeeId: "EMP020", type: "employee" },
-  { id: "ADM001", name: "Admin User", employeeId: "ADM001", type: "admin" },
+  { id: "EMP001", name: "John Smith", employee_id: "EMP001", type: "employee" },
+  { id: "EMP002", name: "Sarah Johnson", employee_id: "EMP002", type: "employee" },
+  { id: "EMP003", name: "Mike Davis", employee_id: "EMP003", type: "employee" },
+  { id: "EMP004", name: "Emily Wilson", employee_id: "EMP004", type: "employee" },
+  { id: "EMP005", name: "David Brown", employee_id: "EMP005", type: "employee" },
+  { id: "EMP006", name: "Lisa Garcia", employee_id: "EMP006", type: "employee" },
+  { id: "EMP007", name: "James Miller", employee_id: "EMP007", type: "employee" },
+  { id: "EMP008", name: "Maria Rodriguez", employee_id: "EMP008", type: "employee" },
+  { id: "EMP009", name: "Robert Taylor", employee_id: "EMP009", type: "employee" },
+  { id: "EMP010", name: "Jennifer Anderson", employee_id: "EMP010", type: "employee" },
+  { id: "EMP011", name: "Michael Thomas", employee_id: "EMP011", type: "employee" },
+  { id: "EMP012", name: "Amanda Jackson", employee_id: "EMP012", type: "employee" },
+  { id: "EMP013", name: "Christopher White", employee_id: "EMP013", type: "employee" },
+  { id: "EMP014", name: "Jessica Harris", employee_id: "EMP014", type: "employee" },
+  { id: "EMP015", name: "Daniel Martin", employee_id: "EMP015", type: "employee" },
+  { id: "EMP016", name: "Ashley Thompson", employee_id: "EMP016", type: "employee" },
+  { id: "EMP017", name: "Matthew Garcia", employee_id: "EMP017", type: "employee" },
+  { id: "EMP018", name: "Stephanie Lee", employee_id: "EMP018", type: "employee" },
+  { id: "EMP019", name: "Andrew Clark", employee_id: "EMP019", type: "employee" },
+  { id: "EMP020", name: "Nicole Lewis", employee_id: "EMP020", type: "employee" },
+  { id: "ADM001", name: "Admin User", employee_id: "ADM001", type: "admin" },
 ];
 
 // Mock waste types
@@ -50,7 +50,7 @@ export const generateMockWasteEntries = (): WasteEntry[] => {
     
     entries.push({
       id: `WE${String(i + 1).padStart(3, '0')}`,
-      employeeId: employee.id,
+      employee_id: employee.id,
       employeeName: employee.name,
       wasteType: wasteType.name,
       amount: Math.round((Math.random() * 10 + 1) * 10) / 10, // 1-10 kg
@@ -91,15 +91,15 @@ export const calculateSummaryData = (entries: WasteEntry[]): SummaryData => {
 export const calculateLeaderboard = (entries: WasteEntry[]): LeaderboardEntry[] => {
   const approvedEntries = entries.filter(e => e.status === 'approved');
   const employeeTotals = approvedEntries.reduce((acc, entry) => {
-    if (!acc[entry.employeeId]) {
-      acc[entry.employeeId] = {
-        employeeId: entry.employeeId,
+    if (!acc[entry.employee_id]) {
+      acc[entry.employee_id] = {
+        employee_id: entry.employee_id,
         employeeName: entry.employeeName,
         totalWaste: 0,
         rank: 0,
       };
     }
-    acc[entry.employeeId].totalWaste += entry.amount;
+    acc[entry.employee_id].totalWaste += entry.amount;
     return acc;
   }, {} as Record<string, LeaderboardEntry>);
 

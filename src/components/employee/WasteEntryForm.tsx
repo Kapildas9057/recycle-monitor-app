@@ -17,11 +17,11 @@ const wasteTypes: WasteType[] = [
 ];
 
 interface WasteEntryFormProps {
-  employeeId: string;
+  employee_id: string;
   onSubmit: (entry: Omit<WasteEntry, 'id' | 'employeeName' | 'status'>, imageFile?: File) => Promise<void>;
 }
 
-export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormProps) {
+export default function WasteEntryForm({ employee_id, onSubmit }: WasteEntryFormProps) {
   const t = useTamilText();
   const [wasteType, setWasteType] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
@@ -31,7 +31,7 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   
-  const CACHE_KEY = `waste-entry-${employeeId}`;
+  const CACHE_KEY = `waste-entry-${employee_id}`;
 
   // Load cached data and get current location on component mount
   useEffect(() => {
@@ -102,7 +102,7 @@ export default function WasteEntryForm({ employeeId, onSubmit }: WasteEntryFormP
     try {
       await onSubmit(
         {
-          employeeId,
+          employee_id,
           wasteType: selectedWasteType.name,
           amount: parseFloat(amount),
           dateTime: new Date().toISOString(),

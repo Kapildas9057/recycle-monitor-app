@@ -12,7 +12,7 @@ export const signupSchema = z.object({
     .min(2, 'Name must be at least 2 characters')
     .max(100, 'Name too long')
     .regex(/^[a-zA-Z\s]+$/, 'Name can only contain letters and spaces'),
-  employeeId: z.string()
+  employee_id: z.string()
     .trim()
     .min(3, 'Employee ID must be at least 3 characters')
     .max(20, 'Employee ID too long')
@@ -35,7 +35,7 @@ export const wasteEntrySchema = z.object({
     .trim()
     .min(1, 'Employee name required')
     .max(100, 'Employee name too long'),
-  employeeId: z.string()
+  employee_id: z.string()
     .trim()
     .min(1, 'Employee ID required')
     .max(20, 'Employee ID too long'),

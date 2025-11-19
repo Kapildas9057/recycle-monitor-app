@@ -24,7 +24,7 @@ export default function SuperAdminDataTab({
 
   const filteredEntries = wasteEntries.filter(
     (entry) =>
-      entry.employeeId?.toLowerCase().includes(filterText.toLowerCase()) ||
+      entry.employee_id?.toLowerCase().includes(filterText.toLowerCase()) ||
       entry.employeeName?.toLowerCase().includes(filterText.toLowerCase()) ||
       entry.wasteType?.toString().toLowerCase().includes(filterText.toLowerCase())
   );
@@ -33,7 +33,7 @@ export default function SuperAdminDataTab({
     const headers = ["Date", "Employee ID", "Employee Name", "Waste Type", "Amount (kg)", "Location", "Status"];
     const rows = wasteEntries.map((e) => [
       e.created_at || e.dateTime || "N/A",
-      e.employeeId || "N/A",
+      e.employee_id || "N/A",
       e.employeeName || "N/A",
       e.wasteType?.toString() || "N/A",
       e.amount || 0,
@@ -94,7 +94,7 @@ export default function SuperAdminDataTab({
                 <TableCell className="text-sm text-muted-foreground">
                   {entry.created_at || entry.dateTime || "N/A"}
                 </TableCell>
-                <TableCell className="font-mono text-sm">{entry.employeeId}</TableCell>
+                <TableCell className="font-mono text-sm">{entry.employee_id}</TableCell>
                 <TableCell>{entry.employeeName || "N/A"}</TableCell>
                 <TableCell>{entry.wasteType?.toString() || "N/A"}</TableCell>
                 <TableCell>{entry.amount} kg</TableCell>

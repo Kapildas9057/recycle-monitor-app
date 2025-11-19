@@ -46,27 +46,5 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    
-    <!-- PWA service worker registration -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/service-worker.js')
-            .then((registration) => {
-              console.log('SW registered: ', registration);
-              // Always try to update to the latest SW
-              registration.update();
-
-              // Reload the page when a new SW takes control
-              navigator.serviceWorker.addEventListener('controllerchange', () => {
-                window.location.reload();
-              });
-            })
-            .catch((registrationError) => {
-              console.log('SW registration failed: ', registrationError);
-            });
-        });
-      }
-    </script>
   </body>
 </html>
