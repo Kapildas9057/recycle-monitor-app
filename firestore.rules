@@ -2,20 +2,30 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper functions ---
+    // -------------------------
+    // 🔐 Helper: Check login
+    // -------------------------
     function isLoggedIn() {
       return request.auth != null;
     }
 
+    // -------------------------
+    // 👑 Super Admin Check
+    // (YOUR REAL UID HERE)
+    // -------------------------
     function isSuperAdmin() {
       return request.auth != null &&
-             request.auth.token.email == "kd850539@gmail.com";
+             request.auth.uid == "2PpAy72RluagHTsQJv9nQlvmTkn2";
     }
 
-    async function userRole() {
-      if (!isLoggedIn()) return null;
-
-      return get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role;
+    // -------------------------
+    // 🧩 Get User Role
+    // (Safe synchronous lookup)
+    // -------------------------
+    function userRole() {
+      return isLoggedIn()
+        ? get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role
+        : null;
     }
 
     // ================================================================
@@ -23,13 +33,13 @@ service cloud.firestore {
     // ================================================================
     match /approval_requests/{uid} {
 
-      // Anyone logged in can create their own approval request
+      // Any logged-in user can create their own approval request
       allow create: if isLoggedIn() && uid == request.auth.uid;
 
-      // Super admin can read & update all
+      // Superadmin can read/update any request
       allow read, update: if isSuperAdmin();
 
-      // No one else can read others' requests (privacy)
+      // Regular users can only read their own request
       allow read: if isLoggedIn() && uid == request.auth.uid;
     }
 
@@ -38,10 +48,10 @@ service cloud.firestore {
     // ================================================================
     match /user_profiles/{uid} {
 
-      // Super admin can manage all profiles
+      // Full access for superadmin
       allow read, write: if isSuperAdmin();
 
-      // Normal users can only read their own profile
+      // Users can only read their own profile
       allow read: if isLoggedIn() && uid == request.auth.uid;
     }
 
@@ -50,10 +60,10 @@ service cloud.firestore {
     // ================================================================
     match /user_roles/{uid} {
 
-      // Super admin full control
+      // Superadmin can fully manage
       allow read, write: if isSuperAdmin();
 
-      // User can read their own role
+      // Users can read their own role
       allow read: if isLoggedIn() && uid == request.auth.uid;
     }
 
@@ -62,17 +72,16 @@ service cloud.firestore {
     // ================================================================
     match /waste_entries/{docId} {
 
-      // Anyone logged in can create waste entries
+      // All logged-in users can create entries
       allow create: if isLoggedIn();
 
-      // Employees & admins can read all waste entries
+      // Anyone logged in can view all entries
       allow read: if isLoggedIn();
 
-      // Only admins & super-admins can update entries
-      allow update: if isSuperAdmin() ||
-                     userRole() == "admin";
+      // Only admin or superadmin can update
+      allow update: if isSuperAdmin() || userRole() == "admin";
 
-      // Only super-admin can delete entries
+      // Only superadmin can delete
       allow delete: if isSuperAdmin();
     }
   }

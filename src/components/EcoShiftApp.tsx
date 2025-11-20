@@ -183,6 +183,9 @@ export default function EcoShiftApp() {
   if (isLoading) return <div className="min-h-screen bg-background flex items-center justify-center"><p>Loading...</p></div>;
   if (!currentUser) return <LoginForm onLogin={handleLogin} />;
 
+
+console.log("LOGGED IN AS:", auth.currentUser?.email);
+
   // 🔐 Super Admin Dashboard
   if (currentUser.type === 'super_admin') {
     return (
