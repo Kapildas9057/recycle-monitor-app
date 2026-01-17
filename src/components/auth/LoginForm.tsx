@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { UserCheck, Lock, Mail, User, IdCard } from "lucide-react";
+import { UserCheck, Lock, Mail, User, IdCard, Eye, EyeOff } from "lucide-react";
 import { InputWithIcon } from "@/components/ui/input-with-icon";
 import { EcoButton } from "@/components/ui/eco-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -88,6 +88,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [isResetting, setIsResetting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const SUPER_ADMIN_EMAIL = "kd850539@gmail.com";
 
@@ -494,16 +495,27 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
                       </Dialog>
                     </div>
 
-                    <InputWithIcon
-                      icon={<Lock className="w-4 h-4" />}
-                      type="password"
-                      placeholder={userType === "employee" ? t("enter_password") : "Enter your password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      minLength={6}
-                      style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}
-                    />
+                    <div className="relative">
+                      <InputWithIcon
+                        icon={<Lock className="w-4 h-4" />}
+                        type={showPassword ? "text" : "password"}
+                        placeholder={userType === "employee" ? t("enter_password") : "Enter your password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        minLength={6}
+                        style={userType === "employee" ? { fontFamily: "'Noto Sans Tamil', sans-serif" } : undefined}
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors z-10"
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
                 </>
               )}

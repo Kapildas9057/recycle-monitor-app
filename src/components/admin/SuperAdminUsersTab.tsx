@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { UserPlus, Trash2, RefreshCw } from "lucide-react";
+import { UserPlus, Trash2, RefreshCw, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { auth } from "@/integrations/firebase/client";
 import { 
   getFirestore, 
@@ -37,6 +37,7 @@ export default function SuperAdminUsersTab({ onRefresh }: { onRefresh: () => voi
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [newUser, setNewUser] = useState({
     email: "",
@@ -194,6 +195,7 @@ export default function SuperAdminUsersTab({ onRefresh }: { onRefresh: () => voi
 
       setShowCreateDialog(false);
       setNewUser({ email: "", password: "", name: "", role: "employee" });
+      setShowPassword(false);
       
       // Sign out the newly created user and let super admin re-authenticate
       await auth.signOut();
@@ -297,12 +299,23 @@ export default function SuperAdminUsersTab({ onRefresh }: { onRefresh: () => voi
 
                 <div>
                   <Label>Password</Label>
-                  <Input
-                    type="password"
-                    value={newUser.password}
-                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                    placeholder="Min. 6 characters"
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      value={newUser.password}
+                      onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                      placeholder="Min. 6 characters"
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <div>
