@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { auth } from "@/integrations/firebase/client";
+import { auth, secondaryAuth } from "@/integrations/firebase/client";
 import { 
   getFirestore, 
   collection, 
@@ -19,7 +19,7 @@ import {
   query,
   orderBy
 } from "firebase/firestore";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
 
 const fdb = getFirestore();
 
@@ -142,12 +142,10 @@ export default function SuperAdminUsersTab({ onRefresh }: { onRefresh: () => voi
     try {
       const employee_id = generateEmployeeId(newUser.role);
 
-      // Store current user to restore later
-      const currentUser = auth.currentUser;
-      
-      // Create new user with Firebase Auth
+      // Create new user with SECONDARY auth instance
+      // This prevents signing out the current Super Admin
       const userCredential = await createUserWithEmailAndPassword(
-        auth,
+        secondaryAuth,
         newUser.email,
         newUser.password
       );
@@ -165,7 +163,7 @@ export default function SuperAdminUsersTab({ onRefresh }: { onRefresh: () => voi
 
       // 2. Save to user_profiles (MUST include user_id field!)
       await setDoc(doc(fdb, "user_profiles", uid), {
-        user_id: uid, // CRITICAL: This was missing!
+        user_id: uid,
         name: newUser.name,
         employee_id: employee_id,
         created_at: serverTimestamp(),
@@ -174,7 +172,7 @@ export default function SuperAdminUsersTab({ onRefresh }: { onRefresh: () => voi
 
       // 3. Save to user_roles
       await setDoc(doc(fdb, "user_roles", uid), {
-        user_id: uid, // Also add user_id for consistency
+        user_id: uid,
         role: newUser.role,
         created_at: serverTimestamp(),
       });
@@ -186,22 +184,19 @@ export default function SuperAdminUsersTab({ onRefresh }: { onRefresh: () => voi
         name: newUser.name,
         employee_id: employee_id,
         role: newUser.role,
-        status: "approved", // Auto-approve admin-created users
+        status: "approved",
         created_at: serverTimestamp(),
         approved_at: serverTimestamp(),
       });
+
+      // Sign out the secondary auth instance (not the main admin session!)
+      await signOut(secondaryAuth);
 
       toast.success(`User created! ID: ${employee_id}`);
 
       setShowCreateDialog(false);
       setNewUser({ email: "", password: "", name: "", role: "employee" });
       setShowPassword(false);
-      
-      // Sign out the newly created user and let super admin re-authenticate
-      await auth.signOut();
-      
-      // Note: Super admin will need to sign back in
-      console.log("User created successfully. Super admin may need to re-login.");
       
       loadUsers();
     } catch (error: any) {
@@ -344,10 +339,6 @@ export default function SuperAdminUsersTab({ onRefresh }: { onRefresh: () => voi
                     "Create User"
                   )}
                 </Button>
-                
-                <p className="text-xs text-muted-foreground">
-                  Note: Creating a user will sign you out. You'll need to log back in.
-                </p>
               </div>
             </DialogContent>
           </Dialog>
