@@ -1,12 +1,20 @@
-import { TrendingUp, Calendar, CalendarDays, CalendarRange } from "lucide-react";
+import { TrendingUp, Calendar, CalendarDays, CalendarRange, Leaf, Recycle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import type { SummaryData } from "@/types";
+import type { SummaryData, WasteEntry } from "@/types";
 
 interface SummaryTabProps {
   summaryData: SummaryData;
+  wasteEntries?: WasteEntry[];
 }
 
-export default function SummaryTab({ summaryData }: SummaryTabProps) {
+export default function SummaryTab({ summaryData, wasteEntries = [] }: SummaryTabProps) {
+  // Calculate approved waste for environmental impact
+  const approvedWasteKg = wasteEntries
+    .filter(entry => entry.status === 'approved')
+    .reduce((sum, entry) => sum + (entry.amount || 0), 0);
+  
+  const co2Avoided = approvedWasteKg * 0.5;
+
   const summaryCards = [
     {
       title: "Today",
@@ -69,6 +77,45 @@ export default function SummaryTab({ summaryData }: SummaryTabProps) {
           </Card>
         ))}
       </div>
+
+      {/* Environmental Impact Section */}
+      <Card className="shadow-card border-primary/20 bg-gradient-to-r from-primary/5 via-background to-accent/5">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-primary/10 rounded-md">
+              <Leaf className="w-4 h-4 text-primary" />
+            </div>
+            <CardTitle className="text-base font-display text-foreground">
+              Environmental Impact
+            </CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg border border-primary/10">
+              <Recycle className="w-5 h-5 text-primary shrink-0" />
+              <div>
+                <p className="text-xs text-muted-foreground">Waste Diverted from Landfill</p>
+                <p className="text-lg font-semibold text-foreground">
+                  {approvedWasteKg.toFixed(1)} <span className="text-sm font-normal text-muted-foreground">kg</span>
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-accent/5 rounded-lg border border-accent/10">
+              <Leaf className="w-5 h-5 text-accent shrink-0" />
+              <div>
+                <p className="text-xs text-muted-foreground">Estimated CO₂ Emissions Avoided</p>
+                <p className="text-lg font-semibold text-foreground">
+                  {co2Avoided.toFixed(1)} <span className="text-sm font-normal text-muted-foreground">kg CO₂e</span>
+                </p>
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground/70 mt-3 italic">
+            Estimation based on standard municipal solid waste emission factors. Values shown are indicative for pilot use.
+          </p>
+        </CardContent>
+      </Card>
 
       <Card className="shadow-card border-card-border">
         <CardHeader>

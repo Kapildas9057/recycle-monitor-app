@@ -80,7 +80,7 @@ export default function AdminDashboard({
           </TabsList>
 
           <TabsContent value="summary">
-            <SummaryTab summaryData={summaryData} />
+            <SummaryTab summaryData={summaryData} wasteEntries={wasteEntries} />
           </TabsContent>
 
           <TabsContent value="data">
