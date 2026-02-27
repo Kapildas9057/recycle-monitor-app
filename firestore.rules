@@ -11,7 +11,6 @@ service cloud.firestore {
 
     // -------------------------
     // 👑 Super Admin Check
-    // (YOUR REAL UID HERE)
     // -------------------------
     function isSuperAdmin() {
       return request.auth != null &&
@@ -20,7 +19,6 @@ service cloud.firestore {
 
     // -------------------------
     // 🧩 Get User Role
-    // (Safe synchronous lookup)
     // -------------------------
     function userRole() {
       return isLoggedIn()
@@ -28,18 +26,16 @@ service cloud.firestore {
         : null;
     }
 
+    function isAdmin() {
+      return isSuperAdmin() || userRole() == "admin";
+    }
+
     // ================================================================
     // APPROVAL REQUESTS
     // ================================================================
     match /approval_requests/{uid} {
-
-      // Any logged-in user can create their own approval request
       allow create: if isLoggedIn() && uid == request.auth.uid;
-
-      // Superadmin can read/update any request
       allow read, update: if isSuperAdmin();
-
-      // Regular users can only read their own request
       allow read: if isLoggedIn() && uid == request.auth.uid;
     }
 
@@ -47,11 +43,7 @@ service cloud.firestore {
     // USER PROFILES
     // ================================================================
     match /user_profiles/{uid} {
-
-      // Full access for superadmin
       allow read, write: if isSuperAdmin();
-
-      // Users can only read their own profile
       allow read: if isLoggedIn() && uid == request.auth.uid;
     }
 
@@ -59,11 +51,7 @@ service cloud.firestore {
     // USER ROLES
     // ================================================================
     match /user_roles/{uid} {
-
-      // Superadmin can fully manage
       allow read, write: if isSuperAdmin();
-
-      // Users can read their own role
       allow read: if isLoggedIn() && uid == request.auth.uid;
     }
 
@@ -71,18 +59,53 @@ service cloud.firestore {
     // WASTE ENTRIES
     // ================================================================
     match /waste_entries/{docId} {
-
-      // All logged-in users can create entries
       allow create: if isLoggedIn();
-
-      // Anyone logged in can view all entries
       allow read: if isLoggedIn();
-
-      // Only admin or superadmin can update
       allow update: if isSuperAdmin() || userRole() == "admin";
-
-      // Only superadmin can delete
       allow delete: if isSuperAdmin();
+    }
+
+    // ================================================================
+    // COMPLAINTS (NEW)
+    // ================================================================
+    match /complaints/{complaintId} {
+      // Anyone (even unauthenticated) can create a complaint
+      allow create: if true;
+
+      // Admins & Super Admin: full access
+      allow read, update, delete: if isAdmin();
+
+      // Employees: read only if assigned to them
+      allow read: if isLoggedIn() &&
+                     resource.data.assignedEmployeeId == request.auth.uid;
+
+      // Employees: update status only if assigned
+      allow update: if isLoggedIn() &&
+                       resource.data.assignedEmployeeId == request.auth.uid &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'resolvedAt']);
+    }
+
+    // ================================================================
+    // ROUTES (NEW)
+    // ================================================================
+    match /routes/{routeId} {
+      // Admins: full access
+      allow read, write: if isAdmin();
+
+      // Employees: create own routes, read own routes
+      allow create: if isLoggedIn() &&
+                       request.resource.data.employeeId == request.auth.uid;
+      allow read: if isLoggedIn() &&
+                     resource.data.employeeId == request.auth.uid;
+
+      // Route points subcollection
+      match /routePoints/{pointId} {
+        allow read, write: if isAdmin();
+        allow create: if isLoggedIn() &&
+                         get(/databases/$(database)/documents/routes/$(routeId)).data.employeeId == request.auth.uid;
+        allow read: if isLoggedIn() &&
+                       get(/databases/$(database)/documents/routes/$(routeId)).data.employeeId == request.auth.uid;
+      }
     }
   }
 }

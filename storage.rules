@@ -9,17 +9,29 @@ service firebase.storage {
     
     // Waste images storage
     match /waste_images/{employee_id}/{imageId} {
-      // Employees can upload their own images
       allow create: if request.auth != null && 
                        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.employee_id == employee_id;
       
-      // Super Admin and Admins can view all images
       allow read: if isSuperAdmin() || 
                      exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
                      get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role in ['admin', 'super_admin'];
       
-      // Only Super Admin can delete
+      allow delete: if isSuperAdmin();
+    }
+
+    // Complaint images storage (NEW)
+    match /complaintImages/{complaintId}/{fileName} {
+      // Anyone can upload complaint images (public portal)
+      allow create: if true;
+
+      // Only admins and super admin can read
+      allow read: if isSuperAdmin() || 
+                     (request.auth != null &&
+                      exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
+                      get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role in ['admin', 'super_admin']);
+
+      // Only super admin can delete
       allow delete: if isSuperAdmin();
     }
   }
