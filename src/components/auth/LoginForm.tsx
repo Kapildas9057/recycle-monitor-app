@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { UserCheck, Lock, Mail, User, IdCard, Eye, EyeOff } from "lucide-react";
+import { Link } from "react-router-dom";
+import { UserCheck, Lock, Mail, User, IdCard, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { InputWithIcon } from "@/components/ui/input-with-icon";
 import { EcoButton } from "@/components/ui/eco-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -568,10 +569,18 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
                       Don&apos;t have an account? <span className="text-primary font-medium">Sign Up</span>
                     </>
                   )
-                )}
+              )}
               </button>
             </form>
           </Tabs>
+
+          {/* Public complaint link */}
+          <div className="mt-4 pt-4 border-t border-border text-center">
+            <Link to="/complaint" className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors font-medium">
+              <AlertTriangle className="w-4 h-4" />
+              File a Public Complaint
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>
