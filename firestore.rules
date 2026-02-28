@@ -69,8 +69,19 @@ service cloud.firestore {
     // COMPLAINTS (NEW)
     // ================================================================
     match /complaints/{complaintId} {
-      // BLOCK direct client writes — all creation goes through Cloud Function (Admin SDK)
-      allow create: if false;
+      // Allow public complaint creation with required fields
+      allow create: if request.resource.data.keys().hasAll([
+                          'fullName', 'phone', 'address', 'zone', 'wardNumber',
+                          'complaintType', 'description', 'issueDate', 'imageUrl',
+                          'status', 'assignedEmployeeId', 'createdAt', 'resolvedAt'
+                        ])
+                     && request.resource.data.keys().size() == 13
+                     && request.resource.data.status == "open"
+                     && request.resource.data.assignedEmployeeId == null
+                     && request.resource.data.resolvedAt == null
+                     && request.resource.data.fullName is string
+                     && request.resource.data.phone is string
+                     && request.resource.data.description is string;
 
       // Admins & Super Admin: full access to read, update, delete
       allow read, update, delete: if isAdmin();

@@ -7,25 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EcoButton } from "@/components/ui/eco-button";
 import { AlertTriangle, CheckCircle2, Leaf, Upload, Send } from "lucide-react";
 import { complaintSchema, complaintTypes, type ComplaintInput } from "@/types/complaint";
-import { getFunctions, httpsCallable } from "firebase/functions";
+import { db } from "@/integrations/firebase/client";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { toast } from "@/components/ui/use-toast";
-
-const functions = getFunctions();
-
-// Cloud Function callables — NO direct Firestore writes
-const submitComplaintFn = httpsCallable<Partial<ComplaintInput>, { success: boolean; complaintId: string }>(functions, "submitComplaint");
-const uploadComplaintImageFn = httpsCallable<
-  { complaintId: string; fileName: string; contentType: string },
-  { uploadUrl: string; filePath: string }
->(functions, "uploadComplaintImage");
-const finalizeComplaintImageFn = httpsCallable<
-  { complaintId: string; filePath: string },
-  { success: boolean; imageUrl: string }
->(functions, "finalizeComplaintImage");
-
 export default function ComplaintForm() {
   const [form, setForm] = useState<Partial<ComplaintInput>>({});
-  const [image, setImage] = useState<File | null>(null);
+  const [_image, setImage] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -52,45 +39,27 @@ export default function ComplaintForm() {
 
     setIsSubmitting(true);
     try {
-      // Step 1: Submit complaint via Cloud Function (server-side validated)
-      const response = await submitComplaintFn(result.data);
-      const { complaintId } = response.data;
-
-      // Step 2: Upload image if provided (via signed URL from Cloud Function)
-      if (image && complaintId) {
-        try {
-          const uploadResponse = await uploadComplaintImageFn({
-            complaintId,
-            fileName: image.name,
-            contentType: image.type || "image/jpeg",
-          });
-
-          const { uploadUrl, filePath } = uploadResponse.data;
-
-          // Upload directly to signed URL
-          await fetch(uploadUrl, {
-            method: "PUT",
-            headers: { "Content-Type": image.type || "image/jpeg" },
-            body: image,
-          });
-
-          // Finalize: update complaint doc with image URL
-          await finalizeComplaintImageFn({ complaintId, filePath });
-        } catch (imgErr) {
-          console.warn("Image upload failed, complaint still submitted");
-        }
-      }
+      await addDoc(collection(db, "complaints"), {
+        fullName: result.data.fullName,
+        phone: result.data.phone,
+        address: result.data.address,
+        zone: result.data.zone,
+        wardNumber: result.data.wardNumber,
+        complaintType: result.data.complaintType,
+        description: result.data.description,
+        issueDate: serverTimestamp(),
+        imageUrl: null,
+        status: "open",
+        assignedEmployeeId: null,
+        createdAt: serverTimestamp(),
+        resolvedAt: null,
+      });
 
       setIsSubmitted(true);
       toast.success("Complaint submitted successfully!");
-    } catch (err: any) {
-      const message = err?.message || "Failed to submit complaint";
-      // Show server validation errors if available
-      if (err?.details?.errors) {
-        setErrors(err.details.errors);
-      } else {
-        toast.error(message);
-      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to submit complaint";
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -223,7 +192,7 @@ export default function ComplaintForm() {
                     />
                     <label htmlFor="complaint-image" className="cursor-pointer flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
                       <Upload className="w-6 h-6" />
-                      <span className="text-sm">{image ? image.name : "Tap to upload or take photo"}</span>
+                      <span className="text-sm">{"Tap to upload or take photo (coming soon)"}</span>
                     </label>
                   </div>
                 </div>
