@@ -192,7 +192,7 @@ export default function ComplaintForm() {
                     />
                     <label htmlFor="complaint-image" className="cursor-pointer flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
                       <Upload className="w-6 h-6" />
-                      <span className="text-sm">{image ? image.name : "Tap to upload or take photo"}</span>
+                      <span className="text-sm">{"Tap to upload or take photo (coming soon)"}</span>
                     </label>
                   </div>
                 </div>
