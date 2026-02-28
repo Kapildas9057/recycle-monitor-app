@@ -12,7 +12,7 @@ import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { toast } from "@/components/ui/use-toast";
 export default function ComplaintForm() {
   const [form, setForm] = useState<Partial<ComplaintInput>>({});
-  const [image, setImage] = useState<File | null>(null);
+  const [_image, setImage] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
