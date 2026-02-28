@@ -39,45 +39,27 @@ export default function ComplaintForm() {
 
     setIsSubmitting(true);
     try {
-      // Step 1: Submit complaint via Cloud Function (server-side validated)
-      const response = await submitComplaintFn(result.data);
-      const { complaintId } = response.data;
-
-      // Step 2: Upload image if provided (via signed URL from Cloud Function)
-      if (image && complaintId) {
-        try {
-          const uploadResponse = await uploadComplaintImageFn({
-            complaintId,
-            fileName: image.name,
-            contentType: image.type || "image/jpeg",
-          });
-
-          const { uploadUrl, filePath } = uploadResponse.data;
-
-          // Upload directly to signed URL
-          await fetch(uploadUrl, {
-            method: "PUT",
-            headers: { "Content-Type": image.type || "image/jpeg" },
-            body: image,
-          });
-
-          // Finalize: update complaint doc with image URL
-          await finalizeComplaintImageFn({ complaintId, filePath });
-        } catch (imgErr) {
-          console.warn("Image upload failed, complaint still submitted");
-        }
-      }
+      await addDoc(collection(db, "complaints"), {
+        fullName: result.data.fullName,
+        phone: result.data.phone,
+        address: result.data.address,
+        zone: result.data.zone,
+        wardNumber: result.data.wardNumber,
+        complaintType: result.data.complaintType,
+        description: result.data.description,
+        issueDate: serverTimestamp(),
+        imageUrl: null,
+        status: "open",
+        assignedEmployeeId: null,
+        createdAt: serverTimestamp(),
+        resolvedAt: null,
+      });
 
       setIsSubmitted(true);
       toast.success("Complaint submitted successfully!");
-    } catch (err: any) {
-      const message = err?.message || "Failed to submit complaint";
-      // Show server validation errors if available
-      if (err?.details?.errors) {
-        setErrors(err.details.errors);
-      } else {
-        toast.error(message);
-      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to submit complaint";
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
