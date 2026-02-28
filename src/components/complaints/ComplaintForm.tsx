@@ -7,22 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EcoButton } from "@/components/ui/eco-button";
 import { AlertTriangle, CheckCircle2, Leaf, Upload, Send } from "lucide-react";
 import { complaintSchema, complaintTypes, type ComplaintInput } from "@/types/complaint";
-import { getFunctions, httpsCallable } from "firebase/functions";
+import { db } from "@/integrations/firebase/client";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { toast } from "@/components/ui/use-toast";
-
-const functions = getFunctions();
-
-// Cloud Function callables — NO direct Firestore writes
-const submitComplaintFn = httpsCallable<Partial<ComplaintInput>, { success: boolean; complaintId: string }>(functions, "submitComplaint");
-const uploadComplaintImageFn = httpsCallable<
-  { complaintId: string; fileName: string; contentType: string },
-  { uploadUrl: string; filePath: string }
->(functions, "uploadComplaintImage");
-const finalizeComplaintImageFn = httpsCallable<
-  { complaintId: string; filePath: string },
-  { success: boolean; imageUrl: string }
->(functions, "finalizeComplaintImage");
-
 export default function ComplaintForm() {
   const [form, setForm] = useState<Partial<ComplaintInput>>({});
   const [image, setImage] = useState<File | null>(null);
