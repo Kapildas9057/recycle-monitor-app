@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { UserCheck, Lock, Mail, User, IdCard, Eye, EyeOff } from "lucide-react";
+import { Link } from "react-router-dom";
+import { UserCheck, Lock, Mail, User, IdCard, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { InputWithIcon } from "@/components/ui/input-with-icon";
 import { EcoButton } from "@/components/ui/eco-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
