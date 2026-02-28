@@ -7,12 +7,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EcoButton } from "@/components/ui/eco-button";
 import { AlertTriangle, CheckCircle2, Leaf, Upload, Send } from "lucide-react";
 import { complaintSchema, complaintTypes, type ComplaintInput } from "@/types/complaint";
-import { getFirestore, collection, addDoc, Timestamp } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getFunctions, httpsCallable } from "firebase/functions";
 import { toast } from "@/components/ui/use-toast";
 
-const fdb = getFirestore();
-const storage = getStorage();
+const functions = getFunctions();
+
+// Cloud Function callables — NO direct Firestore writes
+const submitComplaintFn = httpsCallable<Partial<ComplaintInput>, { success: boolean; complaintId: string }>(functions, "submitComplaint");
+const uploadComplaintImageFn = httpsCallable<
+  { complaintId: string; fileName: string; contentType: string },
+  { uploadUrl: string; filePath: string }
+>(functions, "uploadComplaintImage");
+const finalizeComplaintImageFn = httpsCallable<
+  { complaintId: string; filePath: string },
+  { success: boolean; imageUrl: string }
+>(functions, "finalizeComplaintImage");
 
 export default function ComplaintForm() {
   const [form, setForm] = useState<Partial<ComplaintInput>>({});
@@ -30,6 +39,7 @@ export default function ComplaintForm() {
     e.preventDefault();
     setErrors({});
 
+    // Client-side validation for UX only — server validates independently
     const result = complaintSchema.safeParse(form);
     if (!result.success) {
       const fieldErrors: Record<string, string> = {};
@@ -42,35 +52,45 @@ export default function ComplaintForm() {
 
     setIsSubmitting(true);
     try {
-      let imageUrl: string | null = null;
+      // Step 1: Submit complaint via Cloud Function (server-side validated)
+      const response = await submitComplaintFn(result.data);
+      const { complaintId } = response.data;
 
-      // Create complaint doc first to get ID for image path
-      const complaintRef = await addDoc(collection(fdb, "complaints"), {
-        ...result.data,
-        imageUrl: null,
-        status: "open",
-        assignedEmployeeId: null,
-        issueDate: Timestamp.now(),
-        createdAt: Timestamp.now(),
-        resolvedAt: null,
-      });
+      // Step 2: Upload image if provided (via signed URL from Cloud Function)
+      if (image && complaintId) {
+        try {
+          const uploadResponse = await uploadComplaintImageFn({
+            complaintId,
+            fileName: image.name,
+            contentType: image.type || "image/jpeg",
+          });
 
-      // Upload image if provided
-      if (image) {
-        const imageRef = ref(storage, `complaintImages/${complaintRef.id}/${image.name}`);
-        await uploadBytes(imageRef, image);
-        imageUrl = await getDownloadURL(imageRef);
+          const { uploadUrl, filePath } = uploadResponse.data;
 
-        // Update doc with image URL
-        const { updateDoc, doc } = await import("firebase/firestore");
-        await updateDoc(doc(fdb, "complaints", complaintRef.id), { imageUrl });
+          // Upload directly to signed URL
+          await fetch(uploadUrl, {
+            method: "PUT",
+            headers: { "Content-Type": image.type || "image/jpeg" },
+            body: image,
+          });
+
+          // Finalize: update complaint doc with image URL
+          await finalizeComplaintImageFn({ complaintId, filePath });
+        } catch (imgErr) {
+          console.warn("Image upload failed, complaint still submitted");
+        }
       }
 
       setIsSubmitted(true);
       toast.success("Complaint submitted successfully!");
     } catch (err: any) {
-      console.error("Complaint submission error:", err);
-      toast.error(err.message || "Failed to submit complaint");
+      const message = err?.message || "Failed to submit complaint";
+      // Show server validation errors if available
+      if (err?.details?.errors) {
+        setErrors(err.details.errors);
+      } else {
+        toast.error(message);
+      }
     } finally {
       setIsSubmitting(false);
     }

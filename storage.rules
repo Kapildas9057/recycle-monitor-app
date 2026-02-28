@@ -20,10 +20,10 @@ service firebase.storage {
       allow delete: if isSuperAdmin();
     }
 
-    // Complaint images storage (NEW)
+    // Complaint images storage — uploads via signed URLs from Cloud Function only
     match /complaintImages/{complaintId}/{fileName} {
-      // Anyone can upload complaint images (public portal)
-      allow create: if true;
+      // Direct client uploads blocked — use signed URL from Cloud Function
+      allow create: if false;
 
       // Only admins and super admin can read
       allow read: if isSuperAdmin() || 

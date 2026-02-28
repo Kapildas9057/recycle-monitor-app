@@ -69,10 +69,10 @@ service cloud.firestore {
     // COMPLAINTS (NEW)
     // ================================================================
     match /complaints/{complaintId} {
-      // Anyone (even unauthenticated) can create a complaint
-      allow create: if true;
+      // BLOCK direct client writes — all creation goes through Cloud Function (Admin SDK)
+      allow create: if false;
 
-      // Admins & Super Admin: full access
+      // Admins & Super Admin: full access to read, update, delete
       allow read, update, delete: if isAdmin();
 
       // Employees: read only if assigned to them
@@ -83,6 +83,11 @@ service cloud.firestore {
       allow update: if isLoggedIn() &&
                        resource.data.assignedEmployeeId == request.auth.uid &&
                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'resolvedAt']);
+    }
+
+    // Rate limit logs — only Cloud Functions (Admin SDK) can write
+    match /submissionLogs/{ipAddress} {
+      allow read, write: if false;
     }
 
     // ================================================================
