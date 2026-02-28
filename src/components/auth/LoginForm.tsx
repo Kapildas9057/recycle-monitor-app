@@ -574,11 +574,13 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
             </form>
           </Tabs>
 
-          {/* Public complaint link */}
-          <div className="mt-4 pt-4 border-t border-border text-center">
-            <Link to="/complaint" className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors font-medium">
-              <AlertTriangle className="w-4 h-4" />
-              File a Public Complaint
+          {/* Public complaint button */}
+          <div className="mt-6 pt-4 border-t border-border text-center">
+            <Link to="/complaint" className="w-full">
+              <EcoButton variant="outline" className="w-full gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                File a Complaint
+              </EcoButton>
             </Link>
           </div>
         </CardContent>
