@@ -28,37 +28,44 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "@/components/ui/use-toast";
 import {
-  AlertTriangle, Eye, Trash2, Filter, RefreshCw, MapPin, Phone, User, Calendar,
+  AlertTriangle, Eye, Trash2, Filter, RefreshCw, MapPin, Phone, User, Calendar, ImageIcon,
 } from "lucide-react";
-import type { Complaint } from "@/types/complaint";
 
 const fdb = getFirestore();
 
-type ComplaintStatus = "open" | "investigating" | "resolved";
+type ComplaintStatus = "Pending" | "In Progress" | "Resolved";
 
 const STATUS_OPTIONS: { value: ComplaintStatus; label: string }[] = [
-  { value: "open", label: "Pending" },
-  { value: "investigating", label: "In Progress" },
-  { value: "resolved", label: "Resolved" },
+  { value: "Pending", label: "Pending" },
+  { value: "In Progress", label: "In Progress" },
+  { value: "Resolved", label: "Resolved" },
 ];
 
-const statusBadgeVariant = (status: ComplaintStatus) => {
+const statusBadgeVariant = (status: string) => {
   switch (status) {
-    case "open":
-      return "destructive";
-    case "investigating":
-      return "secondary";
-    case "resolved":
-      return "default";
+    case "Pending":
+      return "destructive" as const;
+    case "In Progress":
+      return "secondary" as const;
+    case "Resolved":
+      return "default" as const;
     default:
-      return "outline";
+      return "outline" as const;
   }
 };
 
-const statusLabel = (status: string) => {
-  const found = STATUS_OPTIONS.find((s) => s.value === status);
-  return found ? found.label : status;
-};
+interface WardComplaint {
+  id: string;
+  wardNumber: string;
+  category: string;
+  description: string;
+  imageUrl: string | null;
+  location: string;
+  submittedBy: string;
+  phone?: string;
+  createdAt: any;
+  status: string;
+}
 
 function formatTimestamp(val: unknown): string {
   if (!val) return "—";
@@ -71,30 +78,33 @@ function formatTimestamp(val: unknown): string {
   return "—";
 }
 
+const categoryLabel = (cat: string) => cat.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
 export default function ComplaintsTab() {
-  const [complaints, setComplaints] = useState<Complaint[]>([]);
+  const [complaints, setComplaints] = useState<WardComplaint[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterWard, setFilterWard] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterDate, setFilterDate] = useState("");
-  const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
+  const [selectedComplaint, setSelectedComplaint] = useState<WardComplaint | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [showImage, setShowImage] = useState<string | null>(null);
 
-  // Real-time listener
+  // Real-time listener on ward_complaints
   useEffect(() => {
-    const q = query(collection(fdb, "complaints"), orderBy("createdAt", "desc"));
+    const q = query(collection(fdb, "ward_complaints"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(
       q,
       (snap) => {
-        const items: Complaint[] = snap.docs.map((d) => ({
+        const items: WardComplaint[] = snap.docs.map((d) => ({
           id: d.id,
-          ...(d.data() as Omit<Complaint, "id">),
+          ...(d.data() as Omit<WardComplaint, "id">),
         }));
         setComplaints(items);
         setLoading(false);
       },
       (err) => {
-        console.error("Complaints listener error:", err);
+        console.error("Ward complaints listener error:", err);
         toast.error("Failed to load complaints");
         setLoading(false);
       }
@@ -102,10 +112,8 @@ export default function ComplaintsTab() {
     return () => unsub();
   }, []);
 
-  // Derived unique wards for filter
   const uniqueWards = Array.from(new Set(complaints.map((c) => c.wardNumber).filter(Boolean))).sort();
 
-  // Filtering
   const filtered = complaints.filter((c) => {
     if (filterWard && c.wardNumber !== filterWard) return false;
     if (filterStatus !== "all" && c.status !== filterStatus) return false;
@@ -119,25 +127,19 @@ export default function ComplaintsTab() {
     return true;
   });
 
-  // Status update
   const handleStatusChange = async (id: string, newStatus: ComplaintStatus) => {
     try {
-      const updateData: Record<string, unknown> = { status: newStatus };
-      if (newStatus === "resolved") {
-        updateData.resolvedAt = Timestamp.now();
-      }
-      await updateDoc(doc(fdb, "complaints", id), updateData);
-      toast.success(`Status updated to ${statusLabel(newStatus)}`);
+      await updateDoc(doc(fdb, "ward_complaints", id), { status: newStatus });
+      toast.success(`Status updated to ${newStatus}`);
     } catch (err) {
       console.error("Status update error:", err);
       toast.error("Failed to update status");
     }
   };
 
-  // Delete
   const handleDelete = async (id: string) => {
     try {
-      await deleteDoc(doc(fdb, "complaints", id));
+      await deleteDoc(doc(fdb, "ward_complaints", id));
       toast.success("Complaint deleted");
       if (selectedComplaint?.id === id) {
         setShowDetails(false);
@@ -149,10 +151,9 @@ export default function ComplaintsTab() {
     }
   };
 
-  // Stats
-  const totalOpen = complaints.filter((c) => c.status === "open").length;
-  const totalInProgress = complaints.filter((c) => c.status === "investigating").length;
-  const totalResolved = complaints.filter((c) => c.status === "resolved").length;
+  const totalPending = complaints.filter((c) => c.status === "Pending").length;
+  const totalInProgress = complaints.filter((c) => c.status === "In Progress").length;
+  const totalResolved = complaints.filter((c) => c.status === "Resolved").length;
 
   return (
     <div className="space-y-6">
@@ -167,7 +168,7 @@ export default function ComplaintsTab() {
         <Card className="border-destructive/30 bg-destructive/5">
           <CardContent className="pt-4 pb-4">
             <p className="text-sm text-destructive">Pending</p>
-            <p className="text-2xl font-bold text-destructive">{totalOpen}</p>
+            <p className="text-2xl font-bold text-destructive">{totalPending}</p>
           </CardContent>
         </Card>
         <Card className="border-border bg-secondary/30">
@@ -248,7 +249,8 @@ export default function ComplaintsTab() {
                     <TableHead>Ward</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead className="hidden md:table-cell">Submitted By</TableHead>
-                    <TableHead className="hidden lg:table-cell">Address</TableHead>
+                    <TableHead className="hidden lg:table-cell">Location</TableHead>
+                    <TableHead className="hidden lg:table-cell">Image</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -258,17 +260,26 @@ export default function ComplaintsTab() {
                   {filtered.map((c) => (
                     <TableRow
                       key={c.id}
-                      className={c.status === "open" ? "bg-destructive/5" : ""}
+                      className={c.status === "Pending" ? "bg-destructive/5" : ""}
                     >
                       <TableCell className="font-mono text-xs">{c.id.slice(0, 8)}…</TableCell>
                       <TableCell>{c.wardNumber}</TableCell>
-                      <TableCell className="capitalize">{c.complaintType.replace(/_/g, " ")}</TableCell>
-                      <TableCell className="hidden md:table-cell">{c.fullName}</TableCell>
-                      <TableCell className="hidden lg:table-cell max-w-[200px] truncate">{c.address}</TableCell>
+                      <TableCell>{categoryLabel(c.category)}</TableCell>
+                      <TableCell className="hidden md:table-cell">{c.submittedBy}</TableCell>
+                      <TableCell className="hidden lg:table-cell max-w-[200px] truncate">{c.location}</TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {c.imageUrl ? (
+                          <Button variant="ghost" size="icon" onClick={() => setShowImage(c.imageUrl)}>
+                            <ImageIcon className="w-4 h-4 text-primary" />
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-xs">{formatTimestamp(c.createdAt)}</TableCell>
                       <TableCell>
-                        <Badge variant={statusBadgeVariant(c.status as ComplaintStatus)}>
-                          {statusLabel(c.status)}
+                        <Badge variant={statusBadgeVariant(c.status)}>
+                          {c.status}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
@@ -326,6 +337,18 @@ export default function ComplaintsTab() {
         </CardContent>
       </Card>
 
+      {/* Image Preview Dialog */}
+      <Dialog open={!!showImage} onOpenChange={() => setShowImage(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Complaint Image</DialogTitle>
+          </DialogHeader>
+          {showImage && (
+            <img src={showImage} alt="Complaint" className="rounded-md border border-border w-full object-contain max-h-[500px]" />
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Detail Dialog */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
         <DialogContent className="max-w-lg">
@@ -340,13 +363,13 @@ export default function ComplaintsTab() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <p className="text-muted-foreground">ID</p>
+                  <p className="text-muted-foreground">Complaint ID</p>
                   <p className="font-mono text-xs">{selectedComplaint.id}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Status</p>
-                  <Badge variant={statusBadgeVariant(selectedComplaint.status as ComplaintStatus)}>
-                    {statusLabel(selectedComplaint.status)}
+                  <Badge variant={statusBadgeVariant(selectedComplaint.status)}>
+                    {selectedComplaint.status}
                   </Badge>
                 </div>
               </div>
@@ -355,16 +378,16 @@ export default function ComplaintsTab() {
                 <div className="flex items-start gap-2">
                   <User className="w-4 h-4 mt-0.5 text-muted-foreground" />
                   <div>
-                    <p className="font-medium">{selectedComplaint.fullName}</p>
-                    <p className="text-muted-foreground">{selectedComplaint.phone}</p>
+                    <p className="font-medium">{selectedComplaint.submittedBy}</p>
+                    {selectedComplaint.phone && <p className="text-muted-foreground">{selectedComplaint.phone}</p>}
                   </div>
                 </div>
 
                 <div className="flex items-start gap-2">
                   <MapPin className="w-4 h-4 mt-0.5 text-muted-foreground" />
                   <div>
-                    <p>{selectedComplaint.address}</p>
-                    <p className="text-muted-foreground">Ward {selectedComplaint.wardNumber} · Zone {selectedComplaint.zone}</p>
+                    <p>{selectedComplaint.location}</p>
+                    <p className="text-muted-foreground">Ward {selectedComplaint.wardNumber}</p>
                   </div>
                 </div>
 
@@ -376,7 +399,7 @@ export default function ComplaintsTab() {
 
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Category</p>
-                <p className="capitalize font-medium">{selectedComplaint.complaintType.replace(/_/g, " ")}</p>
+                <p className="font-medium">{categoryLabel(selectedComplaint.category)}</p>
               </div>
 
               <div>
@@ -390,15 +413,9 @@ export default function ComplaintsTab() {
                   <img
                     src={selectedComplaint.imageUrl}
                     alt="Complaint"
-                    className="rounded-md border border-border max-h-48 object-cover"
+                    className="rounded-md border border-border max-h-48 object-cover cursor-pointer"
+                    onClick={() => setShowImage(selectedComplaint.imageUrl)}
                   />
-                </div>
-              )}
-
-              {selectedComplaint.resolvedAt && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Resolved At</p>
-                  <p className="text-sm">{formatTimestamp(selectedComplaint.resolvedAt)}</p>
                 </div>
               )}
 

@@ -6,53 +6,75 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EcoButton } from "@/components/ui/eco-button";
 import { AlertTriangle, CheckCircle2, Leaf, Upload, Send } from "lucide-react";
-import { complaintSchema, complaintTypes, type ComplaintInput } from "@/types/complaint";
-import { db } from "@/integrations/firebase/client";
+import { db, storage } from "@/integrations/firebase/client";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { toast } from "@/components/ui/use-toast";
+
+const COMPLAINT_CATEGORIES = [
+  { value: "garbage", label: "Garbage" },
+  { value: "overflowing_bin", label: "Overflowing Bin" },
+  { value: "missed_pickup", label: "Missed Pickup" },
+  { value: "other", label: "Other" },
+] as const;
+
+interface ComplaintFormData {
+  wardNumber: string;
+  category: string;
+  description: string;
+  location: string;
+  submittedBy: string;
+  phone: string;
+}
+
 export default function ComplaintForm() {
-  const [form, setForm] = useState<Partial<ComplaintInput>>({});
-  const [_image, setImage] = useState<File | null>(null);
+  const [form, setForm] = useState<Partial<ComplaintFormData>>({});
+  const [image, setImage] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleChange = (field: keyof ComplaintInput, value: string) => {
+  const handleChange = (field: keyof ComplaintFormData, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
     setErrors(prev => ({ ...prev, [field]: "" }));
   };
 
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    if (!form.submittedBy?.trim()) newErrors.submittedBy = "Name is required";
+    if (!form.phone?.trim() || (form.phone.trim().length < 10)) newErrors.phone = "Valid phone number required";
+    if (!form.location?.trim()) newErrors.location = "Address/location is required";
+    if (!form.wardNumber?.trim()) newErrors.wardNumber = "Ward number is required";
+    if (!form.category) newErrors.category = "Select a complaint category";
+    if (!form.description?.trim() || form.description.trim().length < 10) newErrors.description = "Describe the issue (min 10 chars)";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrors({});
-
-    // Client-side validation for UX only — server validates independently
-    const result = complaintSchema.safeParse(form);
-    if (!result.success) {
-      const fieldErrors: Record<string, string> = {};
-      result.error.errors.forEach(err => {
-        if (err.path[0]) fieldErrors[err.path[0] as string] = err.message;
-      });
-      setErrors(fieldErrors);
-      return;
-    }
+    if (!validate()) return;
 
     setIsSubmitting(true);
     try {
-      await addDoc(collection(db, "complaints"), {
-        fullName: result.data.fullName,
-        phone: result.data.phone,
-        address: result.data.address,
-        zone: result.data.zone,
-        wardNumber: result.data.wardNumber,
-        complaintType: result.data.complaintType,
-        description: result.data.description,
-        issueDate: serverTimestamp(),
-        imageUrl: null,
-        status: "open",
-        assignedEmployeeId: null,
+      // Upload image to Firebase Storage if provided
+      let imageUrl: string | null = null;
+      if (image) {
+        const imageRef = ref(storage, `complaint_images/${Date.now()}_${image.name}`);
+        const snap = await uploadBytes(imageRef, image);
+        imageUrl = await getDownloadURL(snap.ref);
+      }
+
+      await addDoc(collection(db, "ward_complaints"), {
+        wardNumber: form.wardNumber!.trim(),
+        category: form.category!,
+        description: form.description!.trim(),
+        imageUrl,
+        location: form.location!.trim(),
+        submittedBy: form.submittedBy!.trim(),
+        phone: form.phone!.trim(),
         createdAt: serverTimestamp(),
-        resolvedAt: null,
+        status: "Pending",
       });
 
       setIsSubmitted(true);
@@ -116,9 +138,9 @@ export default function ComplaintForm() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="fullName">Full Name *</Label>
-                    <Input id="fullName" value={form.fullName || ""} onChange={e => handleChange("fullName", e.target.value)} placeholder="Your full name" />
-                    {errors.fullName && <p className="text-xs text-destructive">{errors.fullName}</p>}
+                    <Label htmlFor="submittedBy">Full Name *</Label>
+                    <Input id="submittedBy" value={form.submittedBy || ""} onChange={e => handleChange("submittedBy", e.target.value)} placeholder="Your full name" />
+                    {errors.submittedBy && <p className="text-xs text-destructive">{errors.submittedBy}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="phone">Phone *</Label>
@@ -128,22 +150,15 @@ export default function ComplaintForm() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="address">Address *</Label>
-                  <Input id="address" value={form.address || ""} onChange={e => handleChange("address", e.target.value)} placeholder="Full address" />
-                  {errors.address && <p className="text-xs text-destructive">{errors.address}</p>}
+                  <Label htmlFor="location">Address / Location *</Label>
+                  <Input id="location" value={form.location || ""} onChange={e => handleChange("location", e.target.value)} placeholder="Full address or location" />
+                  {errors.location && <p className="text-xs text-destructive">{errors.location}</p>}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="zone">Zone *</Label>
-                    <Input id="zone" value={form.zone || ""} onChange={e => handleChange("zone", e.target.value)} placeholder="e.g. Zone A" />
-                    {errors.zone && <p className="text-xs text-destructive">{errors.zone}</p>}
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="wardNumber">Ward Number *</Label>
-                    <Input id="wardNumber" value={form.wardNumber || ""} onChange={e => handleChange("wardNumber", e.target.value)} placeholder="e.g. 12" />
-                    {errors.wardNumber && <p className="text-xs text-destructive">{errors.wardNumber}</p>}
-                  </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="wardNumber">Ward Number *</Label>
+                  <Input id="wardNumber" value={form.wardNumber || ""} onChange={e => handleChange("wardNumber", e.target.value)} placeholder="e.g. 12" />
+                  {errors.wardNumber && <p className="text-xs text-destructive">{errors.wardNumber}</p>}
                 </div>
               </div>
 
@@ -152,18 +167,18 @@ export default function ComplaintForm() {
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Complaint Details</h3>
 
                 <div className="space-y-1.5">
-                  <Label>Complaint Type *</Label>
-                  <Select value={form.complaintType || ""} onValueChange={v => handleChange("complaintType", v)}>
+                  <Label>Category *</Label>
+                  <Select value={form.category || ""} onValueChange={v => handleChange("category", v)}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select issue type" />
+                      <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {complaintTypes.map(t => (
+                      {COMPLAINT_CATEGORIES.map(t => (
                         <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.complaintType && <p className="text-xs text-destructive">{errors.complaintType}</p>}
+                  {errors.category && <p className="text-xs text-destructive">{errors.category}</p>}
                 </div>
 
                 <div className="space-y-1.5">
@@ -192,7 +207,7 @@ export default function ComplaintForm() {
                     />
                     <label htmlFor="complaint-image" className="cursor-pointer flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
                       <Upload className="w-6 h-6" />
-                      <span className="text-sm">{"Tap to upload or take photo (coming soon)"}</span>
+                      <span className="text-sm">{image ? image.name : "Tap to upload or take photo"}</span>
                     </label>
                   </div>
                 </div>

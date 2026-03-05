@@ -96,6 +96,23 @@ service cloud.firestore {
                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'resolvedAt']);
     }
 
+    // ================================================================
+    // WARD COMPLAINTS
+    // ================================================================
+    match /ward_complaints/{complaintId} {
+      // Public: anyone can submit a complaint
+      allow create: if request.resource.data.keys().hasAll([
+                         'wardNumber', 'category', 'description', 'imageUrl',
+                         'location', 'submittedBy', 'phone', 'createdAt', 'status'
+                       ])
+                    && request.resource.data.status == "Pending"
+                    && request.resource.data.submittedBy is string
+                    && request.resource.data.description is string;
+
+      // Admins: full access
+      allow read, update, delete: if isAdmin();
+    }
+
     // Rate limit logs — only Cloud Functions (Admin SDK) can write
     match /submissionLogs/{ipAddress} {
       allow read, write: if false;
