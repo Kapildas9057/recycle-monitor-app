@@ -13,6 +13,7 @@ import SuperAdminDataTab from "./SuperAdminDataTab";
 import SuperAdminAnalyticsTab from "./SuperAdminAnalyticsTab";
 import SuperAdminStorageTab from "./SuperAdminStorageTab";
 import SuperAdminSettingsTab from "./SuperAdminSettingsTab";
+import ComplaintsTab from "./ComplaintsTab";
 
 const fdb = getFirestore();
 
