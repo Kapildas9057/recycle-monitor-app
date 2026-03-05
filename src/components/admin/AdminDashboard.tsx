@@ -100,6 +100,10 @@ export default function AdminDashboard({
             <LeaderboardTab leaderboardData={leaderboardData} />
           </TabsContent>
 
+          <TabsContent value="complaints">
+            <ComplaintsTab />
+          </TabsContent>
+
           <TabsContent value="review">
             <ReviewTab 
               wasteEntries={wasteEntries} 
