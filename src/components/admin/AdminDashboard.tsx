@@ -8,6 +8,7 @@ import DataEntriesTab from "./DataEntriesTab";
 import GraphsTab from "./GraphsTab";
 import LeaderboardTab from "./LeaderboardTab";
 import ReviewTab from "./ReviewTab";
+import ComplaintsTab from "./ComplaintsTab";
 import type { User, WasteEntry, SummaryData, LeaderboardEntry } from "@/types";
 
 interface AdminDashboardProps {
