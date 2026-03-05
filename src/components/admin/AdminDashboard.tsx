@@ -74,6 +74,10 @@ export default function AdminDashboard({
               <Award className="w-4 h-4" />
               Leaderboard
             </TabsTrigger>
+            <TabsTrigger value="complaints" className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              Complaints
+            </TabsTrigger>
             <TabsTrigger value="review" className="flex items-center gap-2">
               <ClipboardCheck className="w-4 h-4" />
               Review
