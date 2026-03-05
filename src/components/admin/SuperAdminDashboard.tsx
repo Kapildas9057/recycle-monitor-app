@@ -159,7 +159,7 @@ export default function SuperAdminDashboard({
         <Card className="border-border bg-card">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <CardHeader className="border-b border-border">
-              <TabsList className="grid w-full grid-cols-6 bg-muted">
+              <TabsList className="grid w-full grid-cols-7 bg-muted">
                 <TabsTrigger value="approvals" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   <UserCheck className="w-4 h-4 mr-2" />
                   Approvals
