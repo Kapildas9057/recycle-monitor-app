@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BarChart3, Calendar, Users, Award, LogOut, ClipboardCheck } from "lucide-react";
+import { BarChart3, Calendar, Users, Award, LogOut, ClipboardCheck, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EcoButton } from "@/components/ui/eco-button";
