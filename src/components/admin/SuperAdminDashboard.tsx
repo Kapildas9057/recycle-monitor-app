@@ -196,6 +196,10 @@ export default function SuperAdminDashboard({
                 <SuperAdminApprovalsTab onRefresh={loadStats} />
               </TabsContent>
 
+              <TabsContent value="complaints" className="mt-0">
+                <ComplaintsTab />
+              </TabsContent>
+
               <TabsContent value="users" className="mt-0">
                 <SuperAdminUsersTab onRefresh={loadStats} />
               </TabsContent>
