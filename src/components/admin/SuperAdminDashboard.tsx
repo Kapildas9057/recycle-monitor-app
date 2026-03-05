@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Shield, Users, Trash2, Database, Settings, BarChart3, LogOut, UserCheck } from "lucide-react";
+import { Shield, Users, Trash2, Database, Settings, BarChart3, LogOut, UserCheck, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import SuperAdminDataTab from "./SuperAdminDataTab";
 import SuperAdminAnalyticsTab from "./SuperAdminAnalyticsTab";
 import SuperAdminStorageTab from "./SuperAdminStorageTab";
 import SuperAdminSettingsTab from "./SuperAdminSettingsTab";
+import ComplaintsTab from "./ComplaintsTab";
 
 const fdb = getFirestore();
 
@@ -158,10 +159,14 @@ export default function SuperAdminDashboard({
         <Card className="border-border bg-card">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <CardHeader className="border-b border-border">
-              <TabsList className="grid w-full grid-cols-6 bg-muted">
+              <TabsList className="grid w-full grid-cols-7 bg-muted">
                 <TabsTrigger value="approvals" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   <UserCheck className="w-4 h-4 mr-2" />
                   Approvals
+                </TabsTrigger>
+                <TabsTrigger value="complaints" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <AlertTriangle className="w-4 h-4 mr-2" />
+                  Complaints
                 </TabsTrigger>
                 <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   <Users className="w-4 h-4 mr-2" />
@@ -189,6 +194,10 @@ export default function SuperAdminDashboard({
             <CardContent className="p-6">
               <TabsContent value="approvals" className="mt-0">
                 <SuperAdminApprovalsTab onRefresh={loadStats} />
+              </TabsContent>
+
+              <TabsContent value="complaints" className="mt-0">
+                <ComplaintsTab />
               </TabsContent>
 
               <TabsContent value="users" className="mt-0">

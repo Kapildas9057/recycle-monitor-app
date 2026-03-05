@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BarChart3, Calendar, Users, Award, LogOut, ClipboardCheck } from "lucide-react";
+import { BarChart3, Calendar, Users, Award, LogOut, ClipboardCheck, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EcoButton } from "@/components/ui/eco-button";
@@ -8,6 +8,7 @@ import DataEntriesTab from "./DataEntriesTab";
 import GraphsTab from "./GraphsTab";
 import LeaderboardTab from "./LeaderboardTab";
 import ReviewTab from "./ReviewTab";
+import ComplaintsTab from "./ComplaintsTab";
 import type { User, WasteEntry, SummaryData, LeaderboardEntry } from "@/types";
 
 interface AdminDashboardProps {
@@ -56,7 +57,7 @@ export default function AdminDashboard({
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 bg-card border border-card-border">
+          <TabsList className="grid w-full grid-cols-6 bg-card border border-card-border">
             <TabsTrigger value="summary" className="flex items-center gap-2">
               <BarChart3 className="w-4 h-4" />
               Summary
@@ -72,6 +73,10 @@ export default function AdminDashboard({
             <TabsTrigger value="leaderboard" className="flex items-center gap-2">
               <Award className="w-4 h-4" />
               Leaderboard
+            </TabsTrigger>
+            <TabsTrigger value="complaints" className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              Complaints
             </TabsTrigger>
             <TabsTrigger value="review" className="flex items-center gap-2">
               <ClipboardCheck className="w-4 h-4" />
@@ -93,6 +98,10 @@ export default function AdminDashboard({
 
           <TabsContent value="leaderboard">
             <LeaderboardTab leaderboardData={leaderboardData} />
+          </TabsContent>
+
+          <TabsContent value="complaints">
+            <ComplaintsTab />
           </TabsContent>
 
           <TabsContent value="review">
