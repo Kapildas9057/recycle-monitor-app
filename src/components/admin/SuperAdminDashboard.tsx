@@ -164,6 +164,10 @@ export default function SuperAdminDashboard({
                   <UserCheck className="w-4 h-4 mr-2" />
                   Approvals
                 </TabsTrigger>
+                <TabsTrigger value="complaints" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <AlertTriangle className="w-4 h-4 mr-2" />
+                  Complaints
+                </TabsTrigger>
                 <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   <Users className="w-4 h-4 mr-2" />
                   Users
